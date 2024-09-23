@@ -1,32 +1,24 @@
-# Use an official Python runtime as a base image
+# Use the official Python image from the Docker Hub
 FROM python:3.11-slim
 
-# Set the working directory inside the container
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set working directory
 WORKDIR /app
 
-# Copy the requirements.txt file into the container
+# Install system dependencies
+
+# Install Python dependencies
 COPY requirements.txt /app/
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Install the dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-ENV PYTHONUNBUFFERED 1
-ENV DJANGO_SUPERUSER_USERNAME=meshya
-ENV DJANGO_SUPERUSER_EMAIL=admin@example.com
-ENV DJANGO_SUPERUSER_PASSWORD=okiptabledotcom
-ENV DJANGO_SETTINGS_MODULE=mewray.settings
-ENV MEWRAY_DEBUG 0
-
-# Copy the rest of the application code into the container
+# Copy the Django app code
 COPY . /app/
 
-RUN touch ee
-RUN  python /app/manage.py migrate --noinput 
-RUN  python /app/manage.py collectstatic --noinput
-RUN  python /app/manage.py inituser
-
-# Expose the application port for Daphne (default 8000)
+# Expose the port for the app (if not using NGINX as a reverse proxy)
 EXPOSE 8000
 
-# Command to run Django migrations and start the app with Daphne
-CMD ["sh", "-c", "daphne -b 0.0.0.0 -p 8000 mewray.asgi:application"]
+# Default command to run your Django app using gunicorn
+CMD ["daphne", "mewray.asgi:application", "-b", "0.0.0.0", "-p", "8000"]

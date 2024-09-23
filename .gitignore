@@ -3,3 +3,8 @@
 **/*.tmp
 celerybeat-schedule
 *.sqlite3
+venv
+.venv
+env
+.env
+staticfiles

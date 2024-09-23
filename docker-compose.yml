@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
 
   nginx:
@@ -15,13 +13,21 @@ services:
 
   django:
     build: .
-    container_name: django_app
-    command: ["sh", "-c", "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 mewray.asgi:application"]
+    command: >
+      sh -c "python manage.py migrate &&
+              python manage.py inituser &&
+              python manage.py collectstatic --noinput &&
+              daphne mewray.asgi:application -b 0.0.0.0 -p 8000"
     volumes:
       - .:/app
     ports:
       - "8000:8000"
-
+    environment:
+      MEWRAY_DEBUG: "1"
+      DJANGO_SETTINGS_MODULE: mewray.settings
+      DJANGO_SUPERUSER_USERNAME: meshya
+      DJANGO_SUPERUSER_EMAIL: mew@mew.mew
+      DJANGO_SUPERUSER_PASSWORD: mewmew
   celery_worker:
     build: .
     container_name: celery_worker
