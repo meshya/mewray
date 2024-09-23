@@ -1,0 +1,6 @@
+Django
+daphne
+celery
+SQLAlchemy
+djangorestframework
+aiohttp
