@@ -11,14 +11,14 @@ app.autodiscover_tasks()
 app.conf.beat_schedule = {
     'assigns': {
         'task': 'core.tasks.check_all_assigns',
-        'schedule': crontab(minute='*/1'),
+        'schedule': crontab(minute=21),
     },
     'nodes': {
         'task': 'core.tasks.check_all_nodes',
-        'schedule': crontab(minute='*/1')
+        'schedule': crontab(hour='*/2')
     },
     'subscriptions': {
         'task': 'core.tasks.check_all_subscriptions',
-        'schedule': crontab(minute='*/1')
+        'schedule': crontab(hour='*/5')
     }
 }

@@ -97,7 +97,11 @@ async def acheck_all_assigns():
     tasks = []
     async for assign in models.assign.objects.filter(enable=True).aiterator():
         tasks.append(acheck_assign_backend(assign))
-    await asyncio.gather(*tasks) 
+        if len(tasks) > 3 :
+            await asyncio.gather(*tasks)
+            tasks = []
+    if tasks:
+        await asyncio.gather(*tasks)
 
 @shared_task
 def check_all_nodes():
@@ -107,7 +111,11 @@ async def acheck_all_nodes():
     tasks = []
     async for node in models.node.objects.filter(enable=True).aiterator():
         tasks.append(acheck_backend_assign(node))
-    await asyncio.gather(*tasks)
+        if len(tasks) > 3 :
+            await asyncio.gather(*tasks)
+            tasks = []
+    if tasks:
+        await asyncio.gather(*tasks)
 
 @shared_task
 def check_all_subscriptions():
@@ -117,4 +125,8 @@ async def acheck_all_subscriptions():
     tasks = []
     async for sub in models.subscribe.objects.all().aiterator():
         tasks.append(acheck_subscription_aligns(sub))
-    await asyncio.gather(*tasks)
+        if len(tasks) > 3 :
+            await asyncio.gather(*tasks)
+            tasks = []
+    if tasks:
+        await asyncio.gather(*tasks)

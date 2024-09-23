@@ -18,7 +18,7 @@ ENV DJANGO_SETTINGS_MODULE=mewray.settings
 ENV MEWRAY_DEBUG 0
 
 # Copy the rest of the application code into the container
-# COPY . /app/
+COPY . /app/
 
 RUN touch ee
 RUN  python /app/manage.py migrate --noinput 
