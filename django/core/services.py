@@ -3,6 +3,7 @@ from .backends import getBackend
 from .models import AssignReport
 from traffic import traffic
 from .backends.base import baseNodeBackend
+from asgiref.sync import sync_to_async
 class NodeService:
     def __init__(self, node:models.node):
         self.dbObj = node
@@ -33,6 +34,8 @@ class SubscriptionService:
         assigns = models.assign.objects.filter(subscribe=self.dbObj)
         traffics = traffic(0)
         async for i in assigns.aiterator():
-            rep = await NodeService(i.node).agetReportByAssign(i)
+            rep = await NodeService(
+                    await sync_to_async(getattr)(i,'node')
+                ).agetReportByAssign(i)
             traffics += rep.Traffic
         return traffics
