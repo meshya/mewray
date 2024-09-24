@@ -28,6 +28,7 @@ services:
       DJANGO_SUPERUSER_USERNAME: meshya
       DJANGO_SUPERUSER_EMAIL: mew@mew.mew
       DJANGO_SUPERUSER_PASSWORD: mewmew
+      HOST_NAME: manage.cartbypass.info
   celery_worker:
     build: .
     container_name: celery_worker

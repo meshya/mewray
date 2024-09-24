@@ -27,9 +27,17 @@ SECRET_KEY = 'django-insecure-&ygc++d&z0%e5q5lt2zy^uxf!215x@(7c0a7op=(c#9aaa6mb(
 DEBUG = os.environ.get('MEWRAY_DEBUG', True)
 DEBUG = int(DEBUG)
 DEBUG = bool(DEBUG)
-DEBUG = False
 
-ALLOWED_HOSTS = ['127.0.0.1']
+HOST_NAME = os.environ.get('HOST_NAME', 'localhost')
+
+ALLOWED_HOSTS = [
+    HOST_NAME
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    *[f'https://{h}' for h in ALLOWED_HOSTS],
+    *[f'http://{h}' for h in ALLOWED_HOSTS]
+]
 
 
 # Application definition
