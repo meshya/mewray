@@ -70,9 +70,9 @@ class SubscriptionsListAPIView(APIView):
                 HttpStatus=404
             )
         check_subscription_aligns.delay(obj.id)
-        respSerializer = SubscriptionSerializer(obj)
+        respSerializer = SubscriptionSerializer()
         return makeResponse(
-            data=respSerializer.data,
+            data=await respSerializer.ato_representation(obj),
             HttpStatus=201,
             status=0
         )
