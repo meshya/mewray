@@ -17,9 +17,9 @@ proxy = "http://127.0.0.1:8080"
 ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
-request_arguments={
-        'proxy': proxy,   'ssl': ssl_context
-}
+request_arguments={}
+#        'proxy': proxy,   'ssl': ssl_context
+#}
 
 
 class ConnectionError(Exception): ...
