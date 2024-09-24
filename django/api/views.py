@@ -6,6 +6,8 @@ import json
 from asgiref.sync import async_to_sync, sync_to_async
 from django.views.decorators.csrf import csrf_exempt
 from apikey.decorators import apikey_protect
+from django.utils.decorators import method_decorator
+
 
 def makeResponse(data=None, status=0, HttpStatus=202,**kwargs):
     export = {}
@@ -19,6 +21,7 @@ def makeResponse(data=None, status=0, HttpStatus=202,**kwargs):
         **kwargs
     )
 
+@method_decorator(apikey_protect, name='dispatch')
 class SubscriptionsAPIView(APIView):
     @async_to_sync
     async def get(self, request, pk):
@@ -32,8 +35,7 @@ class SubscriptionsAPIView(APIView):
                 0
             )
         )
-    @csrf_exempt
-    @apikey_protect
+    
     @async_to_sync
     async def delete(self, request, pk):
         q = models.subscribe.objects.filter(api_pk=pk)
@@ -50,8 +52,8 @@ class SubscriptionsAPIView(APIView):
 
 from core.tasks import check_subscription_aligns
 
+@method_decorator(apikey_protect, name='dispatch')
 class SubscriptionsListAPIView(APIView):
-    @apikey_protect
     @async_to_sync
     async def post(self, request:HttpRequest):
         serializer = SubscriptionCreateSerializer(data=request.data)
