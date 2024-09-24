@@ -23,7 +23,7 @@ services:
       daphne mewray.asgi:application -b 0.0.0.0 -p 8000
       "
     volumes:
-      - mewray:/mewray
+      - ./django:/mewray
       - staticfiles:/staticfiles
     ports:
       - "8000:8000"
@@ -36,7 +36,7 @@ services:
     container_name: celery_worker
     command: ["celery", "-A", "core", "worker", "--loglevel=info"]
     volumes:
-      - mewray:/mewray
+      - ./django:/mewray
     depends_on:
       - django
 
@@ -45,10 +45,9 @@ services:
     container_name: celery_beat
     command: ["celery", "-A", "core", "beat", "--loglevel=info"]
     volumes:
-      - mewray:/mewray
+      - ./django:/mewray
     depends_on:
       - django
 
 volumes:
-  mewray:
   staticfiles:

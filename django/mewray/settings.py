@@ -27,6 +27,7 @@ SECRET_KEY = 'django-insecure-&ygc++d&z0%e5q5lt2zy^uxf!215x@(7c0a7op=(c#9aaa6mb(
 DEBUG = os.environ.get('MEWRAY_DEBUG', True)
 DEBUG = int(DEBUG)
 DEBUG = bool(DEBUG)
+DEBUG = True
 
 HOST_NAME = os.environ.get('HOST_NAME', 'localhost')
 

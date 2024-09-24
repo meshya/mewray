@@ -1,5 +1,5 @@
 from typing import Any
-from django.http import HttpRequest, HttpResponseNotAllowed
+from django.http import HttpRequest, HttpResponse
 from .services import apikeyService
 
 class Middleware:
@@ -9,4 +9,6 @@ class Middleware:
         key = request.headers.get('X-Manager-key', None)
         if apikeyService().check_access(key):
             return self.get_response(request, *args, **kwds)
-        return HttpResponseNotAllowed()
+        return HttpResponse(
+            status=405
+        )
