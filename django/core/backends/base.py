@@ -9,8 +9,8 @@ class baseNodeBackend:
         self.host = host
         self.auth = auth
         self.setting = settings
-    def getReportBySubscription(self, subpk) -> AssignReport:
-        return a2s(self.agetReportBySubscription)(subpk)
+    def getReportByAssign(self, subpk) -> AssignReport:
+        return a2s(self.agetReportByAssign)(subpk)
     def getAllReport(self):
         return a2s(self.agetAllReport)()
     def getAllAssigns(self):

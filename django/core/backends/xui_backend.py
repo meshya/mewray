@@ -172,7 +172,7 @@ class XUIBackend(baseNodeBackend):
     def email(self, uuid):
         return f"mewray{sha256(bytes(uuid)).hexdigest()}"
 
-    async def agetReportBySubscription(self, uuid) -> AssignReport:
+    async def agetReportByAssign(self, uuid) -> AssignReport:
         reps = await self.api.agetReportAll()
         email = self.email(uuid)
         Filter = filter(lambda x: x['email'] == email ,reps)
