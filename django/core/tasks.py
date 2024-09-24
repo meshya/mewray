@@ -63,7 +63,13 @@ async def acheck_subscription_aligns(subid):
 
 @shared_task
 def check_assign_backend(assignid):
-    return async_to_sync(acheck_assign_backend)(assignid)
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(
+            acheck_assign_backend(assignid)
+        )
+    except RuntimeError:
+        return async_to_sync(acheck_subscription_aligns)(assignid)
 
 async def acheck_assign_backend(assignid):
     if not isinstance(assignid, models.assign):
@@ -80,7 +86,13 @@ async def acheck_assign_backend(assignid):
 
 @shared_task
 def check_backend_assign(nodeId):
-    return async_to_sync(acheck_backend_assign)()
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(
+            acheck_assign_backend(nodeId)
+        )
+    except RuntimeError:
+        return async_to_sync(acheck_subscription_aligns)(nodeId)
 
 async def acheck_backend_assign(nodeId):
     if not isinstance(nodeId, models.node):
