@@ -8,8 +8,14 @@ import asyncio
 
 @shared_task
 def check_subscription_aligns(subid):
-    open('f', 'w').write('l')
-    return async_to_sync(acheck_subscription_aligns)(subid)
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(
+            acheck_subscription_aligns(subid)
+        )
+    except RuntimeError:
+        return async_to_sync(acheck_subscription_aligns)(subid)
+
 
 async def acheck_subscription_aligns(subid):
     if not isinstance(subid, models.subscribe):
