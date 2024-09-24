@@ -22,8 +22,6 @@ class traffic:
             self.bytes = amount.bytes
         else:
             raise
-    def __new__(cls, *args):
-        return super(cls, traffic).__new__(cls)
     @classmethod
     def _from_string(cls, string):
         reg = r"(\d+)[A-z][bB]"

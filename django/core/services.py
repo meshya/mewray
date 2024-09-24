@@ -14,7 +14,7 @@ class NodeService:
             self.dbObj.settings
         )
     async def agetReportByAssign(self, assign) -> AssignReport:
-        return await self.backend.agetReportByAssign(assign)
+        return await self.backend.agetReportByAssign(assign.uuid)
     async def agetUrlByAssign(self, assign:str, **wargs):
         return await self.backend.agetURL(assign, **wargs)
     async def aassignExists(self, assign:str)->bool:
