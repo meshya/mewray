@@ -31,7 +31,9 @@ DEBUG = bool(DEBUG)
 HOST_NAME = os.environ.get('HOST_NAME', 'localhost')
 
 ALLOWED_HOSTS = [
-    HOST_NAME
+    HOST_NAME,
+    "127.0.0.1",
+    'localhost'
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -55,7 +57,8 @@ INSTALLED_APPS = [
     'api',
     'panel',
     'core',
-    'sub'
+    'sub',
+    'apikey'
 ]
 
 CELERY_BROKER_URL = f"sqla+sqlite:////{BASE_DIR}/broker.sqlite3"

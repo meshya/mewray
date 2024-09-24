@@ -4,6 +4,8 @@ from .serializers import SubscriptionSerializer, SubscriptionCreateSerializer, S
 from django.http import HttpResponseNotFound, JsonResponse, HttpResponse, HttpRequest, Http404
 import json
 from asgiref.sync import async_to_sync, sync_to_async
+from django.views.decorators.csrf import csrf_exempt
+from apikey.decorators import apikey_protect
 
 def makeResponse(data=None, status=0, HttpStatus=202,**kwargs):
     export = {}
@@ -30,6 +32,8 @@ class SubscriptionsAPIView(APIView):
                 0
             )
         )
+    @csrf_exempt
+    @apikey_protect
     @async_to_sync
     async def delete(self, request, pk):
         q = models.subscribe.objects.filter(api_pk=pk)
@@ -47,6 +51,7 @@ class SubscriptionsAPIView(APIView):
 from core.tasks import check_subscription_aligns
 
 class SubscriptionsListAPIView(APIView):
+    @apikey_protect
     @async_to_sync
     async def post(self, request:HttpRequest):
         serializer = SubscriptionCreateSerializer(data=request.data)

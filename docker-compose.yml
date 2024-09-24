@@ -1,48 +1,54 @@
 services:
 
   nginx:
-    image: nginx:latest
+    build: nginx/.
     container_name: nginx
     ports:
       - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf  # Map the nginx.conf to container
-      - .:/app  # Map your Django app code directory to serve static and media files
     depends_on:
       - django
+    environment:
+      HOST_NAME: ${HOST_NAME}
+    volumes:
+      - staticfiles:/staticfiles
+
 
   django:
-    build: .
+    build: django/.
     command: >
-      sh -c "python manage.py migrate &&
-              python manage.py inituser &&
-              python manage.py collectstatic --noinput &&
-              daphne mewray.asgi:application -b 0.0.0.0 -p 8000"
+      sh -c "
+      python manage.py collectstatic --noinput &&
+      cp staticfiles/* /staticfiles/ -r &&
+      rm staticfiles -rf &&
+      daphne mewray.asgi:application -b 0.0.0.0 -p 8000
+      "
     volumes:
-      - .:/app
+      - mewray:/mewray
+      - staticfiles:/staticfiles
     ports:
       - "8000:8000"
     environment:
-      MEWRAY_DEBUG: "1"
-      DJANGO_SETTINGS_MODULE: mewray.settings
-      DJANGO_SUPERUSER_USERNAME: meshya
-      DJANGO_SUPERUSER_EMAIL: mew@mew.mew
-      DJANGO_SUPERUSER_PASSWORD: mewmew
-      HOST_NAME: manage.cartbypass.info
+      MEWRAY_DEBUG: "0"
+      HOST_NAME: ${HOST_NAME}
+
   celery_worker:
-    build: .
+    build: django/.
     container_name: celery_worker
     command: ["celery", "-A", "core", "worker", "--loglevel=info"]
     volumes:
-      - .:/app
+      - mewray:/mewray
     depends_on:
       - django
 
   celery_beat:
-    build: .
+    build: django/.
     container_name: celery_beat
     command: ["celery", "-A", "core", "beat", "--loglevel=info"]
     volumes:
-      - .:/app
+      - mewray:/mewray
     depends_on:
       - django
+
+volumes:
+  mewray:
+  staticfiles:
