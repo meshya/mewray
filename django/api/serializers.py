@@ -5,6 +5,7 @@ from .models import SubscriptionDto
 from core.services import SubscriptionService
 import uuid
 import datetime
+from asgiref.sync import async_to_sync
 
 class SubscriptionSerializer(serializers.Serializer):
     UserId = serializers.CharField()
@@ -15,7 +16,10 @@ class SubscriptionSerializer(serializers.Serializer):
     MaxTraffic = serializers.CharField()
     UsedTraffic = serializers.CharField()
 
-    def to_representation(self, instance):
+    def ato_representation(self, instance):
+        return async_to_sync(self.ato_representation)(instance)
+
+    async def ato_representation(self, instance):
         sub = instance
         return {
             "UserId": sub.api_pk,
@@ -24,7 +28,7 @@ class SubscriptionSerializer(serializers.Serializer):
             "EnableUntil": sub.start_date.timestamp() + sub.period.total_seconds(),
             "MaxConnectionCount": sub.connection_number,
             "MaxTraffic": f"{sub.traffic}M",
-            "UsedTraffic": f"{SubscriptionService(sub).get_used_traffic()}M"
+            "UsedTraffic": f"{await SubscriptionService(sub).get_used_traffic()}M"
         }
     
 
