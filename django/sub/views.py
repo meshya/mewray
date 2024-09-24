@@ -8,11 +8,11 @@ async def subcribeView(request:HttpRequest, subid):
     if await subFilter.aexists():
         sub = await subFilter.afirst()
         asignsQ = assign.objects.filter(subscribe=sub)
-        resp = '<h1>'
+        resp = ''
         async for i in asignsQ.aiterator():
             node = await sync_to_async(getattr)(i, 'node')
             nodeService = NodeService(node)
-            resp += "<p>" + await nodeService.agetUrlByAssign(i.uuid, name='test') + "</p>"
-        resp += '</h1>'
+            resp += "" + await nodeService.agetUrlByAssign(i.uuid, name='test') + ""
+        resp += ''
         return HttpResponse(resp)
     return HttpResponseNotFound()
