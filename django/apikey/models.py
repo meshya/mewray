@@ -5,6 +5,6 @@ def makeAccessKey():
     return uuid4().__str__()
 
 class access(models.Model):
-    key = models.CharField(max_length=30, default=makeAccessKey)
+    key = models.CharField(max_length=36, default=makeAccessKey)
     name = models.CharField(max_length=10)
     access = models.BooleanField(default=True)
