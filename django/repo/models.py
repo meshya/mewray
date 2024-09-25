@@ -4,8 +4,8 @@ from traffic.fields import TrafficField
 
 class subscribe(models.Model):
     id = models.BigAutoField(primary_key=True)
-    api_pk = models.CharField(max_length=20)
-    view_pk = models.CharField(max_length=20)
+    api_pk = models.CharField(max_length=36)
+    view_pk = models.CharField(max_length=36)
     node_number = models.IntegerField()
     connection_number = models.IntegerField()
     period = models.DurationField()
@@ -39,4 +39,4 @@ class assign(models.Model):
     subscribe = models.ForeignKey(subscribe, on_delete=models.CASCADE)
     node = models.ForeignKey(node, on_delete=assign_on_node_delete)
     enable = models.BooleanField(default=True)
-    uuid = models.CharField(max_length=20)
+    uuid = models.CharField(max_length=36)
