@@ -4,3 +4,4 @@ celery
 SQLAlchemy
 djangorestframework
 aiohttp
+drf-spectacular

@@ -6,6 +6,7 @@ from core.services import SubscriptionService
 import uuid
 import datetime
 from asgiref.sync import async_to_sync
+from copy import deepcopy
 
 class SubscriptionSerializer(serializers.Serializer):
     UserId = serializers.CharField()
@@ -16,11 +17,15 @@ class SubscriptionSerializer(serializers.Serializer):
     MaxTraffic = serializers.CharField()
     UsedTraffic = serializers.CharField()
 
-    def ato_representation(self, instance):
+    def to_representation(self, instance):
         return async_to_sync(self.ato_representation)(instance)
 
     async def ato_representation(self, instance):
         sub = instance
+        try :
+            traffic = await SubscriptionService(sub).get_used_traffic()
+        except:
+            traffic = 0
         return {
             "UserId": sub.api_pk,
             "ViewId": sub.view_pk,
@@ -28,13 +33,20 @@ class SubscriptionSerializer(serializers.Serializer):
             "EnableUntil": sub.start_date.timestamp() + sub.period.total_seconds(),
             "MaxConnectionCount": sub.connection_number,
             "MaxTraffic": f"{sub.traffic}M",
-            "UsedTraffic": f"{await SubscriptionService(sub).get_used_traffic()}M"
+            "UsedTraffic": f"{traffic}M"
         }
     
 
 class SubscriptionListSerializer(serializers.ListSerializer):
     child = SubscriptionSerializer()
-
+    def to_representation(self, data):
+        return async_to_sync(self.ato_representation)(data)
+    async def ato_representation(self, data):
+        all = []
+        for i in data:
+            j = await self.child.ato_representation(i)
+            all.append(j)
+        return all
 class SubscriptionCreateSerializer(serializers.Serializer):
     UserId = serializers.CharField()
     PlanId = serializers.IntegerField()
@@ -77,3 +89,36 @@ class SubscriptionCreateSerializer(serializers.Serializer):
             sub = await models.subscribe.objects.acreate(**arguments)
 
         return sub
+
+from .models import ResponseDto
+from random import randint
+cache = {}
+class ResponseSerializer(serializers.Serializer):
+    status = serializers.IntegerField(default=0)
+    #data = serializers.Serializer(default=serializers.empty)
+
+    def __init__(self, data=serializers.empty, status=0 ,**kwargs):
+        dto = ResponseDto(
+            status=status,
+            data=data
+        )
+        super().__init__(instance=dto, **kwargs)
+
+    @classmethod
+    def __class_getitem__(cls, _child:type[serializers.Serializer]):
+        key = f'RespInstance{_child.__name__}'
+        if key in cache:
+            return cache[key]
+        vglobal = {
+            '_child':_child,
+            'ResponseSerializer': ResponseSerializer
+        }
+        exec(
+f'''
+class {key}(ResponseSerializer):
+    data = _child()
+    child = _child
+''', vglobal
+        )
+        cache[key] = vglobal[key]
+        return vglobal[key]

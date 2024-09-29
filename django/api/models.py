@@ -9,3 +9,10 @@ class SubscriptionDto:
     def __init__(self, **kw):
         for name, val in  kw.items():
             setattr(self, name, val)
+
+class ResponseDto:
+    status:int
+    data:SubscriptionDto
+    def __init__(self, **kw):
+        for name, val in  kw.items():
+            setattr(self, name, val)        

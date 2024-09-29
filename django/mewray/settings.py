@@ -59,8 +59,27 @@ INSTALLED_APPS = [
     'panel',
     'core',
     'sub',
-    'apikey'
+    'apikey',
+    'drf_spectacular',
+    'drf_spectacular_sidecar'
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'apikey.authentication.XManagerAuth',
+    ],
+}
+
+SPECTACULAR_SETTINGS = {
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
+    'TITLE': 'Manager api',
+    'DESCRIPTION': 'Your project description',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
 
 CELERY_BROKER_URL = f"sqla+sqlite:////{BASE_DIR}/broker.sqlite3"
 CELERY_RESULT_BACKEND = f"db+sqlite:////{BASE_DIR}/results.sqlite"
@@ -127,7 +146,7 @@ else:
         }
     }
 
-STATIC_URL = '/static/'
+STATIC_URL = '/static/' 'drf_spectacular',
 
 if not True:
     # Static files (CSS, JavaScript, Images)
