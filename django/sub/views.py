@@ -1,7 +1,7 @@
 from django.http import HttpRequest, HttpResponse, HttpResponseNotFound
 from repo.models import subscribe, assign
 from core.services import NodeService
-from asgiref.sync import sync_to_async
+from asgiref.sync import sync_to_async, async_to_sync
 from rest_framework.decorators import api_view
 from drf_spectacular.utils import extend_schema, OpenApiExample
 
@@ -21,16 +21,18 @@ from drf_spectacular.utils import extend_schema, OpenApiExample
     description="Returns config urls of this user, ATTENTION: use ViewId of Subscriptions as subid"
 )
 @api_view(['GET'])
-async def subcribeView(request:HttpRequest, subid):
-    subFilter = subscribe.objects.filter(view_pk=subid)
-    if await subFilter.aexists():
-        sub = await subFilter.afirst()
-        asignsQ = assign.objects.filter(subscribe=sub)
-        resp = ''
-        async for i in asignsQ.aiterator():
-            node = await sync_to_async(getattr)(i, 'node')
-            nodeService = NodeService(node)
-            resp += "" + await nodeService.agetUrlByAssign(i.uuid, name='test') + ""
-        resp += ''
-        return HttpResponse(resp)
-    return HttpResponseNotFound()
+def subcribeView(request:HttpRequest, subid):
+    async def view():
+        subFilter = subscribe.objects.filter(view_pk=subid)
+        if await subFilter.aexists():
+            sub = await subFilter.afirst()
+            asignsQ = assign.objects.filter(subscribe=sub)
+            resp = ''
+            async for i in asignsQ.aiterator():
+                node = await sync_to_async(getattr)(i, 'node')
+                nodeService = NodeService(node)
+                resp += "" + await nodeService.agetUrlByAssign(i.uuid, name='test') + ""
+            resp += ''
+            return HttpResponse(resp)
+        return HttpResponseNotFound()
+    return async_to_sync(view)()
