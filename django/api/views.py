@@ -28,8 +28,8 @@ class SubscriptionsAPIView(APIView):
                 # 'XManagerKey'
             # ]
     )
-    async def get(self, request, pk):
-        q = models.subscribe.objects.filter(api_pk=pk)
+    async def get(self, request, UserId):
+        q = models.subscribe.objects.filter(api_pk=UserId)
         if not await q.aexists():
             return await makeResponse(status=4, HttpStatus=404)
         serializer = ResponseSerializer[SubscriptionSerializer](
@@ -49,8 +49,8 @@ class SubscriptionsAPIView(APIView):
             204:ResponseSerializer
         }
     )
-    async def delete(self, request, pk):
-        q = models.subscribe.objects.filter(api_pk=pk)
+    async def delete(self, request, UserId):
+        q = models.subscribe.objects.filter(api_pk=UserId)
         if not await q.aexists():
             return await makeResponse(
                 ResponseSerializer(status=4),

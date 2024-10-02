@@ -21,9 +21,9 @@ from drf_spectacular.utils import extend_schema, OpenApiExample
     description="Returns config urls of this user, ATTENTION: use ViewId of Subscriptions as subid"
 )
 @api_view(['GET'])
-def subcribeView(request:HttpRequest, subid):
+def subcribeView(request:HttpRequest, ViewId):
     async def view():
-        subFilter = subscribe.objects.filter(view_pk=subid)
+        subFilter = subscribe.objects.filter(view_pk=ViewId)
         if await subFilter.aexists():
             sub = await subFilter.afirst()
             asignsQ = assign.objects.filter(subscribe=sub)
