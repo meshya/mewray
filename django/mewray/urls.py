@@ -22,3 +22,6 @@ urlpatterns = [
     path('', include('api.urls')),
     path('', include('sub.urls'))
 ]
+
+from rest_framework.settings import api_settings
+api_settings.DEFAULT_FORMAT_SUFFIXES = []

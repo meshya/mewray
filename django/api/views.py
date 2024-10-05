@@ -1,14 +1,11 @@
 from rest_framework.views import APIView
 from repo import models
 from .serializers import SubscriptionSerializer, SubscriptionCreateSerializer, SubscriptionListSerializer, ResponseSerializer
-from django.http import HttpResponseNotFound, JsonResponse, HttpResponse, HttpRequest, Http404
-import json
+from django.http import JsonResponse, HttpResponse, HttpRequest, Http404
 from asgiref.sync import async_to_sync, sync_to_async
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, extend_schema_view
-from drf_spectacular.types import OpenApiTypes
-from .docs import authentication
+from drf_spectacular.utils import extend_schema
+from apikey.authentication import XManagerAuth
+
 
 async def makeResponse(serializer:ResponseSerializer, HttpStatus=202,**kwargs):
     export = await sync_to_async(getattr)(serializer, 'data')
@@ -19,10 +16,14 @@ async def makeResponse(serializer:ResponseSerializer, HttpStatus=202,**kwargs):
     )
 
 class SubscriptionsAPIView(APIView):
+    authentication_classes = [
+        XManagerAuth
+    ]
     @async_to_sync
     @extend_schema(
         responses={
-                200:ResponseSerializer[SubscriptionSerializer]
+                200:ResponseSerializer[SubscriptionSerializer],
+                404:ResponseSerializer[4]
             },
             # auth=[
                 # 'XManagerKey'
@@ -36,40 +37,45 @@ class SubscriptionsAPIView(APIView):
             status=0,
             data=await q.afirst()
         )
-        return HttpResponse(
-            await makeResponse(
+        return await makeResponse(
                 serializer,
-                0
+                200
             )
-        )
+
     
     @async_to_sync
     @extend_schema(
         responses={
-            204:ResponseSerializer
+            204:ResponseSerializer,
+            404:ResponseSerializer[4]
         }
     )
     async def delete(self, request, UserId):
         q = models.subscribe.objects.filter(api_pk=UserId)
         if not await q.aexists():
             return await makeResponse(
-                ResponseSerializer(status=4),
+                ResponseSerializer[4](),
                 HttpStatus=404
             )
         await q.adelete()
         return await makeResponse(
-            ResponseSerializer(),
+            ResponseSerializer(status=0),
             HttpStatus=204
         )
 
 from core.tasks import check_subscription_aligns
 
 class SubscriptionsListAPIView(APIView):
+    authentication_classes = [
+        XManagerAuth
+    ]
     @async_to_sync
     @extend_schema(
         request=SubscriptionCreateSerializer,
         responses={
-            201:ResponseSerializer[SubscriptionSerializer]
+            201:ResponseSerializer[SubscriptionSerializer],
+            400:ResponseSerializer[3],
+            404:ResponseSerializer[4]
         }
     )
     async def post(self, request:HttpRequest):
@@ -85,7 +91,7 @@ class SubscriptionsListAPIView(APIView):
             obj = await serializer.acreate(serializer.data)
         except Http404:
             return await makeResponse(
-                ResponseSerializer(status=3),
+                ResponseSerializer(status=4),
                 HttpStatus=404
             )
         check_subscription_aligns.delay(obj.id)
@@ -100,7 +106,8 @@ class SubscriptionsListAPIView(APIView):
     @async_to_sync
     @extend_schema(
         responses={
-            200:ResponseSerializer[SubscriptionListSerializer]
+            200:ResponseSerializer[SubscriptionListSerializer],
+            500:ResponseSerializer[2]
         }
     )
     async def get(self, request):
@@ -113,7 +120,7 @@ class SubscriptionsListAPIView(APIView):
         except:
             return await makeResponse(
                 ResponseSerializer(
-                    status=3
+                    status=2
                 ),
                 HttpStatus=500
             )
@@ -121,3 +128,19 @@ class SubscriptionsListAPIView(APIView):
             serializer,
             HttpStatus=200
         )
+
+from apikey.exceptions import NoApiKey, InvalidApiKey
+
+@async_to_sync
+async def AuthErrorHandler(exc, context):
+    if isinstance(exc, NoApiKey|InvalidApiKey):
+        return await makeResponse(
+            ResponseSerializer(
+                status=1
+            ),
+            HttpStatus=401
+        )
+    return await makeResponse(
+        ResponseSerializer[2](),
+        HttpStatus=500
+    )

@@ -1,12 +1,11 @@
 from repo import models
 from rest_framework import serializers
 from django.http import Http404
-from .models import SubscriptionDto
 from core.services import SubscriptionService
 import uuid
 import datetime
 from asgiref.sync import async_to_sync
-from copy import deepcopy
+
 
 class SubscriptionSerializer(serializers.Serializer):
     UserId = serializers.CharField()
@@ -91,10 +90,23 @@ class SubscriptionCreateSerializer(serializers.Serializer):
         return sub
 
 from .models import ResponseDto
-from random import randint
 cache = {}
+
+class StatusField(serializers.ChoiceField):
+    def __init__(self, default
+        ,
+        choices=[
+        (0, 'Ok'), 
+        (1, 'Permission Error'), 
+        (2, 'Server Error or Unknown'), 
+        (3, 'Invalid Request'), 
+        (4, 'Not Exists'), 
+        ], **kwargs):
+        super().__init__(choices, default=default, **kwargs)
+
 class ResponseSerializer(serializers.Serializer):
-    status = serializers.IntegerField(default=0)
+    status = StatusField(default=0)
+
     #data = serializers.Serializer(default=serializers.empty)
 
     def __init__(self, data=serializers.empty, status=0 ,**kwargs):
@@ -106,19 +118,39 @@ class ResponseSerializer(serializers.Serializer):
 
     @classmethod
     def __class_getitem__(cls, _child:type[serializers.Serializer]):
-        key = f'RespInstance{_child.__name__}'
-        if key in cache:
-            return cache[key]
-        vglobal = {
-            '_child':_child,
-            'ResponseSerializer': ResponseSerializer
-        }
-        exec(
+        if isinstance(_child, int):
+
+            key = f'RespInstanceStatus{_child}'
+            if key in cache:
+                return cache[key]
+            vglobal = {
+                '_child':_child,
+                'ResponseSerializer': ResponseSerializer,
+                'StatusField': StatusField 
+            }
+            exec(
+f'''
+class {key}(ResponseSerializer):
+    status = StatusField(default=_child)
+''', vglobal
+        )
+            cache[key] = vglobal[key]
+            return vglobal[key]
+
+        elif isinstance(_child, type):
+            key = f'RespInstance{_child.__name__}'
+            if key in cache:
+                return cache[key]
+            vglobal = {
+                '_child':_child,
+                'ResponseSerializer': ResponseSerializer
+            }
+            exec(
 f'''
 class {key}(ResponseSerializer):
     data = _child()
     child = _child
 ''', vglobal
         )
-        cache[key] = vglobal[key]
-        return vglobal[key]
+            cache[key] = vglobal[key]
+            return vglobal[key]
