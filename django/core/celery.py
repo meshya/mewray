@@ -17,8 +17,16 @@ app.conf.beat_schedule = {
         'task': 'core.tasks.check_all_nodes',
         'schedule': crontab(hour='*/2')
     },
-    'subscriptions': {
-        'task': 'core.tasks.check_all_subscriptions',
+    'subscriptions_assigns': {
+        'task': 'core.tasks.check_all_subscriptions_assigns',
         'schedule': crontab(hour='*/5')
+    },
+    'subscription_time_and_traffic':{
+        'task': 'core.tasks.check_all_subscriptions_time_and_traffic',
+        'schedule': crontab(hour='*/3')
+    },
+    'nodes_traffic': {
+        'task': 'core.tasks.check_all_nodes_traffic',
+        'schedule': crontab(hour='*/2')
     }
 }

@@ -11,6 +11,7 @@ class subscribe(models.Model):
     period = models.DurationField()
     traffic = TrafficField()
     start_date = models.DateTimeField()
+    enable = models.BooleanField()
 
     def __str__(self):
         return f'{self.api_pk}->{self.view_pk}'

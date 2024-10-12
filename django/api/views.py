@@ -63,7 +63,7 @@ class SubscriptionsAPIView(APIView):
             HttpStatus=204
         )
 
-from core.tasks import check_subscription_aligns
+from core.tasks import check_subscription_assigns
 
 class SubscriptionsListAPIView(APIView):
     authentication_classes = [
@@ -94,7 +94,7 @@ class SubscriptionsListAPIView(APIView):
                 ResponseSerializer(status=4),
                 HttpStatus=404
             )
-        check_subscription_aligns.delay(obj.id)
+        check_subscription_assigns.delay(obj.id)
         respSerializer = ResponseSerializer[SubscriptionSerializer](
             status=0,
             data=obj
