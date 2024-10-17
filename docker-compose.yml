@@ -7,11 +7,11 @@ services:
       - "80:80"
     depends_on:
       - django
+      - flower
     environment:
       HOST_NAME: ${HOST_NAME}
     volumes:
       - staticfiles:/staticfiles
-
 
   django:
     build: django/.
@@ -25,11 +25,12 @@ services:
     volumes:
       - ./django:/mewray
       - staticfiles:/staticfiles
-    ports:
-      - "8000:8000"
     environment:
       MEWRAY_DEBUG: "0"
       HOST_NAME: ${HOST_NAME}
+      REDIS_CONNECTION: "redis://redis:6379"
+    depends_on:
+      - redis
 
   celery_worker:
     build: django/.
@@ -39,6 +40,9 @@ services:
       - ./django:/mewray
     depends_on:
       - django
+      - redis
+    environment:
+      REDIS_CONNECTION: "redis://redis:6379"
 
   celery_beat:
     build: django/.
@@ -48,6 +52,28 @@ services:
       - ./django:/mewray
     depends_on:
       - django
+      - redis
+    environment:
+      REDIS_CONNECTION: "redis://redis:6379"
+
+  flower:
+    build: django/.
+    container_name: flower
+    command: ["celery", "-A", "core", "flower", "--port=8000"]
+    depends_on:
+      - redis
+      - celery_worker
+      - celery_beat
+    environment:
+      REDIS_CONNECTION: "redis://redis:6379"
+    ports:
+      - 8001:8000
+
+  redis:
+    image: redis:alpine
+    container_name: resis
+    ports:
+      - 6379:6379
 
 volumes:
   staticfiles:

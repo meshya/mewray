@@ -24,10 +24,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-&ygc++d&z0%e5q5lt2zy^uxf!215x@(7c0a7op=(c#9aaa6mb('
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('MEWRAY_DEBUG', True)
-DEBUG = int(DEBUG)
-DEBUG = bool(DEBUG)
-DEBUG = True
+DEBUG = os.environ.get('MEWRAY_DEBUG', 'true') == 'true'
+DISABLE_CACHE = os.environ.get('MEWRAY_DISABLE_CACHE', 'false') == 'true'
+REDIS_CONNECTION = os.environ.get('REDIS_CONNECTION', None)
+USE_REDIS = True if REDIS_CONNECTION else False
 
 HOST_NAME = os.environ.get('HOST_NAME', 'localhost')
 
@@ -83,8 +83,12 @@ SPECTACULAR_SETTINGS = {
     ''',
 }
 
-CELERY_BROKER_URL = f"sqla+sqlite:////{BASE_DIR}/broker.sqlite3"
-CELERY_RESULT_BACKEND = f"db+sqlite:////{BASE_DIR}/results.sqlite"
+if USE_REDIS:
+    CELERY_BROKER_URL = REDIS_CONNECTION
+    CELERY_RESULT_BACKEND = REDIS_CONNECTION
+else:
+    CELERY_BROKER_URL = f"sqla+sqlite:////{BASE_DIR}/broker.sqlite3"
+    CELERY_RESULT_BACKEND = f"db+sqlite:////{BASE_DIR}/results.sqlite"
 CELERY_TASK_ALWAYS_EAGER = True  # Run tasks locally without a message broker
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -134,19 +138,27 @@ DATABASES = {
     }
 }
 
-if DEBUG:
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
-        }
-    }
-else:
+if DISABLE_CACHE:
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "unique-snowflake",
         }
     }
+else:
+    if USE_REDIS:
+        CACHES = {
+            "default": {
+                "BACKEND": "django.core.cache.backends.redis.RedisCache",
+                "LOCATION": REDIS_CONNECTION
+            }
+        }
+    else:
+        CACHES = {
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "unique-snowflake",
+            }
+        }
 
 STATIC_URL = '/static/' 'drf_spectacular',
 

@@ -5,6 +5,7 @@ from django.http import JsonResponse, HttpResponse, HttpRequest, Http404
 from asgiref.sync import async_to_sync, sync_to_async
 from drf_spectacular.utils import extend_schema
 from apikey.authentication import XManagerAuth
+from core.tasks import check_subscription_assigns, check_backend_assign
 
 
 async def makeResponse(serializer:ResponseSerializer, HttpStatus=202,**kwargs):
@@ -14,6 +15,9 @@ async def makeResponse(serializer:ResponseSerializer, HttpStatus=202,**kwargs):
         status = HttpStatus,
         **kwargs
     )
+
+from django.db.models import Subquery
+
 
 class SubscriptionsAPIView(APIView):
     authentication_classes = [
@@ -57,13 +61,24 @@ class SubscriptionsAPIView(APIView):
                 ResponseSerializer[4](),
                 HttpStatus=404
             )
+        sub = await q.afirst()
+        nodeq = models.node.objects.filter(
+            id__in=Subquery(
+                models.assign.objects.filter(
+                    subscribe=sub
+                )
+            )
+            )
+        async for node in nodeq.aiterator():
+            nodeId = await sync_to_async(lambda: node.id)
+            await sync_to_async(check_backend_assign.delay)(nodeId)
+
         await q.adelete()
         return await makeResponse(
             ResponseSerializer(status=0),
             HttpStatus=204
         )
 
-from core.tasks import check_subscription_assigns
 
 class SubscriptionsListAPIView(APIView):
     authentication_classes = [
@@ -94,7 +109,7 @@ class SubscriptionsListAPIView(APIView):
                 ResponseSerializer(status=4),
                 HttpStatus=404
             )
-        check_subscription_assigns.delay(obj.id)
+        await sync_to_async(check_subscription_assigns.delay)(obj.id)
         respSerializer = ResponseSerializer[SubscriptionSerializer](
             status=0,
             data=obj

@@ -11,7 +11,7 @@ class subscribe(models.Model):
     period = models.DurationField()
     traffic = TrafficField()
     start_date = models.DateTimeField()
-    enable = models.BooleanField()
+    enable = models.BooleanField(default=True)
 
     def __str__(self):
         return f'{self.api_pk}->{self.view_pk}'
@@ -29,6 +29,7 @@ class plan(models.Model):
 
 
 class node(models.Model):
+    id = models.BigAutoField(primary_key=True)
     backend = models.CharField(max_length=10, default='XUI')
     address = models.CharField(max_length=50)
     auth = models.CharField(max_length=100)

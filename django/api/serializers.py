@@ -22,8 +22,8 @@ class SubscriptionSerializer(serializers.Serializer):
     async def ato_representation(self, instance):
         sub = instance
         try :
-            traffic = await SubscriptionService(sub).get_used_traffic()
-        except:
+            traffic = await SubscriptionService(sub).get_used_traffic(timeout=5)
+        except (TimeoutError ,RuntimeError):
             traffic = 0
         return {
             "UserId": sub.api_pk,

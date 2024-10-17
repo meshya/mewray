@@ -13,13 +13,13 @@ import json
 import ssl
 import urllib.parse as urlParse
 
-proxy = "http://127.0.0.1:8080"
+proxy = "http://172.17.0.1:8080"
 ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
-request_arguments={}
+request_arguments={
 #        'proxy': proxy,   'ssl': ssl_context
-#}
+}
 
 
 class ConnectionError(Exception): ...
@@ -71,8 +71,13 @@ class api:
         session = aiohttp.ClientSession(cookies=cookies)
         return session
     async def agetReportAll(self):
-        obj = await self.aGetInbound()
-        return obj['clientStats']
+        cache_key=f'xui_{self.cacheId}_report'
+        data = await cache.aget(cache_key, None)
+        if data is None:
+            obj = await self.aGetInbound()
+            data = obj['clientStats']
+            await cache.aset(cache_key, data, 5*60)
+        return data
     async def aCreateClient(self, uuid):
         import json
         url = f"{self.address}/panel/inbound/addClient"
