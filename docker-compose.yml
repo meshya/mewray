@@ -26,7 +26,7 @@ services:
       - ./django:/mewray
       - staticfiles:/staticfiles
     environment:
-      MEWRAY_DEBUG: "0"
+      MEWRAY_DEBUG: ${MEWRAY_DEBUG}
       HOST_NAME: ${HOST_NAME}
       REDIS_CONNECTION: "redis://redis:6379"
     depends_on:
@@ -43,6 +43,7 @@ services:
       - redis
     environment:
       REDIS_CONNECTION: "redis://redis:6379"
+      MEWRAY_DEBUG: ${MEWRAY_DEBUG}
 
   celery_beat:
     build: django/.
@@ -54,6 +55,7 @@ services:
       - django
       - redis
     environment:
+      MEWRAY_DEBUG: ${MEWRAY_DEBUG}
       REDIS_CONNECTION: "redis://redis:6379"
 
   flower:
@@ -65,6 +67,7 @@ services:
       - celery_worker
       - celery_beat
     environment:
+      MEWRAY_DEBUG: ${MEWRAY_DEBUG}
       REDIS_CONNECTION: "redis://redis:6379"
     ports:
       - 8001:8000
