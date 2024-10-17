@@ -181,7 +181,7 @@ class XUIBackend(baseNodeBackend):
         Filter = filter(lambda x: x['email'] == email ,reps)
         List = list(Filter)
         if not List.__len__():
-            raise
+            raise ModuleNotFoundError()
         rep = List[0]
         return self._convertReport(rep)
 

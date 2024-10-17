@@ -16,7 +16,7 @@ class NormalTitle:
         now = datetime.now()
         spent = now - start
         full = await agetattr(self.sub, 'period')
-        ratio = max(spent/full, 1)
+        ratio = min(spent/full, 1)
         freeSpace = ' '*int((1-ratio)*10)
         fullSpace = '='*int(ratio*10)
         progress = f'[{fullSpace}{freeSpace}]'
