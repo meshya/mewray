@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 urlpatterns = [
-    path('subscriptions/<str:UserId>/',
+    path('subscriptions/<str:UserId>',
         views.SubscriptionsAPIView.as_view()
     ),
     path('subscriptions',
