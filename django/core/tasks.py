@@ -68,7 +68,7 @@ async def acheck_subscription_assigns(subid):
             '-assign_count'
         )
         availableNodesIter = availableNodes.__aiter__()
-        while count < sub.node_number and count < nodeCount:
+        while count < subNodeNumber and count < nodeCount:
             node = await anext(availableNodesIter)
             uuid = None
             while not uuid:

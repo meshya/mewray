@@ -66,3 +66,5 @@ class traffic:
         if not isinstance(other, type(self)):
             other = type(self)(other)
         return self.bytes > other.bytes
+    def __truediv__(self, other):
+        return self.bytes / other.bytes
