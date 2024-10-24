@@ -19,19 +19,26 @@ class NodeService:
             self.dbObj.auth,
             self.dbObj.settings
         )
+    async def amakeSureExists(self, assign:models.assign):
+        state = await self.aassignExists(assign)
+        if state:
+            return "CREATED"
+        task = sync_to_async(_create_assign.delay)
+        await task(assign.id)
+        return "CREATING"
     async def agetReportByAssign(self, assign) -> AssignReport:
         return await self.backend.agetReportByAssign(assign.uuid)
     async def agetUrlByAssign(self, assign:str, **wargs):
         return await self.backend.agetURL(assign, **wargs)
-    async def aassignExists(self, assign:str)->bool:
+    async def aassignExists(self, assign:models.assign)->bool:
         assigns = await self.backend.agetAllAssigns()
-        return assign in assigns
+        return assign.uuid in assigns
     async def agetAssignAll(self)->list[str]:
         return await self.backend.agetAllAssigns()
-    async def acreateAssign(self, assign:str):
-        return await self.backend.aaddSubscription(assign)
-    async def adeleteAssign(self, uuid):
-        return await self.backend.adeleteSubscription(uuid)
+    async def acreateAssign(self, assign:models.assign):
+        return await self.backend.aaddSubscription(assign.uuid)
+    async def adeleteAssign(self, assign:models.assign):
+        return await self.backend.adeleteSubscription(assign.uuid)
 
 class SubscriptionService:
     def __init__(self, sub:models.subscribe):
@@ -70,3 +77,10 @@ def _get_used_traffic(subId, cacheKey):
         traffics += rep.Traffic
     cache.set(cacheKey, traffics, 60)
     return traffics
+
+@shared_task(trail=True)
+def _create_assign(assignId):
+    assign = models.assign.objects.get(id=assignId)
+    ns = NodeService(assign.node)
+    task = async_to_sync(ns.acreateAssign)
+    return task(assign)

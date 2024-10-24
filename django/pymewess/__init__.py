@@ -116,3 +116,7 @@ class vless(BaseProtocol):
         base += f"&security={config.security}&pbk={config.sslpubkey}&fp={config.fingerprint}&sni={config.sni}&sid={config.shortid}&spx={config.spx}"
         base += f"#{config.name}"
         return base
+
+class EmptyConfig(Config):
+    def __init__(self, name):
+        super().__init__(protocol='vless', address='xxx.xxx', connection='tcp', name=name, id='xxx')

@@ -1,5 +1,5 @@
 from typing import Any
-from .base import baseNodeBackend
+from .base import baseNodeBackend, AssignNotSynced
 from core.models import AssignReport
 from django.core.cache import cache
 from hashlib import sha256
@@ -182,7 +182,7 @@ class XUIBackend(baseNodeBackend):
         Filter = filter(lambda x: x['email'] == email ,reps)
         List = list(Filter)
         if not List.__len__():
-            raise ModuleNotFoundError()
+            raise AssignNotSynced(uuid)
         rep = List[0]
         return self._convertReport(rep)
 

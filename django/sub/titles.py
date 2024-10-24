@@ -12,7 +12,7 @@ class NormalTitle:
         start = datetime(
             day=startDate.day,
             month=startDate.month,
-            yea=startDate.year
+            year=startDate.year
         )
         now = datetime.now()
         spent = now - start

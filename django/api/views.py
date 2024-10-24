@@ -66,14 +66,16 @@ class SubscriptionsAPIView(APIView):
             id__in=Subquery(
                 models.assign.objects.filter(
                     subscribe=sub
-                )
+                ).values('id')
             )
-            )
-        async for node in nodeq.aiterator():
-            nodeId = await sync_to_async(lambda: node.id)
-            await sync_to_async(check_backend_assign.delay)(nodeId)
+        ).values('id')
+        tasks = []
+        async for nodeId in nodeq.aiterator():
+            task = sync_to_async(check_backend_assign.delay)(nodeId)
+            tasks.append(task)
 
         await q.adelete()
+        for t in tasks: await t
         return await makeResponse(
             ResponseSerializer(status=0),
             HttpStatus=204
@@ -156,6 +158,8 @@ async def AuthErrorHandler(exc, context):
             HttpStatus=401
         )
     return await makeResponse(
-        ResponseSerializer[2](),
+        ResponseSerializer[2](
+            status=2
+        ),
         HttpStatus=500
     )

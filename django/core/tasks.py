@@ -96,8 +96,8 @@ async def acheck_assign_backend(assignid):
         assign = assignid
     node = await sync_to_async(getattr)(assign, "node")
     service = NodeService(node)
-    if not await service.aassignExists(assign.uuid):
-        await service.acreateAssign(assign.uuid)
+    if not await service.aassignExists(assign):
+        await service.acreateAssign(assign)
 
 async def acheck_backend_assign(nodeId):
     if not isinstance(nodeId, models.node):

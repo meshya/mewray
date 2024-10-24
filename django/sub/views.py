@@ -5,6 +5,7 @@ from asgiref.sync import sync_to_async, async_to_sync
 from rest_framework.decorators import api_view
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from .titles import NormalTitle
+from .configs import createEmptyConfig
 
 @extend_schema(
     responses={
@@ -32,8 +33,15 @@ def subcribeView(request:HttpRequest, ViewId):
             async for i in asignsQ.aiterator():
                 node = await sync_to_async(getattr)(i, 'node')
                 nodeService = NodeService(node)
-                title = await NormalTitle(sub).normal()
-                resp += "" + await nodeService.agetUrlByAssign(i.uuid, name=title) + ""
+                assignStatus = await nodeService.amakeSureExists(i)
+                if assignStatus == "CREATED":
+                    title = await NormalTitle(sub).normal()
+                    url = "" + await nodeService.agetUrlByAssign(i.uuid, name=title) + ""
+                else:
+                    title = "Creating config, reload this sub 1min later"
+                    url = createEmptyConfig(title)
+                resp += url
+
             resp += ''
             return HttpResponse(resp)
         return HttpResponseNotFound()
