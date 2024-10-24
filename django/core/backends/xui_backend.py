@@ -13,12 +13,12 @@ import json
 import ssl
 import urllib.parse as urlParse
 
-proxy = "http://172.17.0.1:8080"
+proxy = "http://127.0.0.1:8080"
 ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 request_arguments={
-#        'proxy': proxy,   
+        'proxy': proxy,   
     'ssl': ssl_context
 }
 

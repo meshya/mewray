@@ -51,6 +51,17 @@ class traffic:
         return factor * amount
 
     def __str__(self):
+        size_units = ["B", "KB", "MB", "GB", "TB", "PB"]
+        i = 0
+        _bytes = self.bytes
+        while _bytes >= 1024 and i < len(size_units) - 1:
+            size_bytes /= 1024
+            i += 1
+        _bytes = str(f"{_bytes:.2f}").replace('0', ' ').strip().replace(' ', '0')
+        if _bytes[-1] == '.':
+            _bytes = _bytes[:-1]
+        return f"{_bytes or '0'}{size_units[i]}"
+
         return self.bytes.__str__()
     def __repr__(self) -> str:
         return f'<traffic {self.bytes} bytes>'

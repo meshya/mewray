@@ -72,7 +72,7 @@ async def acheck_subscription_assigns(subid):
             node = await anext(availableNodesIter)
             uuid = None
             while not uuid:
-                _uuid = uuid4()
+                _uuid = str(uuid4())
                 if not await models.assign.objects.filter(uuid=_uuid).aexists():
                     uuid = _uuid
             assign = await models.assign.objects.acreate(
@@ -197,7 +197,6 @@ async def acheck_node_traffic(nodeId):
         if not newEnable:
             await sync_to_async(check_all_subscriptions_assigns.delay)()
 
-
 async def acheck_all_subscriptions_time_and_traffic():
     return await run_multiple_task(
         [
@@ -256,11 +255,11 @@ def check_all_subscriptions_time_and_traffic():
 
 @shared_task
 def check_backend_assign(nodeId):
-    return async_to_sync(acheck_subscription_assigns)(nodeId)
+    return async_to_sync(acheck_backend_assign)(nodeId)
 
 @shared_task
 def check_assign_backend(assignid):
-    return async_to_sync(acheck_subscription_assigns)(assignid)
+    return async_to_sync(acheck_assign_backend)(assignid)
 
 @shared_task
 def check_subscription_assigns(subid):
