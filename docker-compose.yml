@@ -29,6 +29,8 @@ services:
       MEWRAY_DEBUG: ${MEWRAY_DEBUG}
       HOST_NAME: ${HOST_NAME}
       REDIS_CONNECTION: "redis://redis:6379"
+    ports:
+      - 8000:8000
     depends_on:
       - redis
 

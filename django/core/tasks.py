@@ -30,8 +30,12 @@ async def run_multiple_task(tasks, chunk=1, delay=0):
             await asyncio.gather(*runThisTasks)
         runThisTasks = []
     if errors:
-        errorStr = '\n,'.join(map(str, errors))
-        raise Exception(f"Multiple errors: {errorStr}")
+        if len(errors) > 1:
+            errorStr = '\n,'.join(map(str, errors))
+            error = Exception(f"Multiple errors: {errorStr}")
+        else:
+            error = errors[0]
+        raise error
 
 
 async def acheck_subscription_assigns(subid):

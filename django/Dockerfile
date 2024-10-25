@@ -10,7 +10,6 @@ ENV DJANGO_SUPERUSER_EMAIL=mew@mew.mew
 ENV DJANGO_SUPERUSER_PASSWORD=mewmew
 
 RUN mkdir -p /mewray
-RUN touch /f
 
 # Set working directory
 WORKDIR /mewray
@@ -19,11 +18,6 @@ WORKDIR /mewray
 # Install Python dependencies
 COPY requirements.txt /mewray/
 RUN pip install --upgrade pip && pip install -r requirements.txt
-
-# Copy the Django app code
-COPY . /mewray/
-
-EXPOSE 8000
 
 
 RUN python manage.py migrate
