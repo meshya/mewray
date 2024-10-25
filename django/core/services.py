@@ -28,19 +28,19 @@ class NodeService:
         return "CREATING"
     async def agetReportByAssign(self, assign) -> AssignReport:
         if isinstance(assign, models.assign):
-            uuid = await sync_to_async(lambda: assign.uuid)
+            uuid = await sync_to_async(lambda: assign.uuid)()
         else:
             uuid = assign
         return await self.backend.agetReportByAssign(uuid)
     async def agetUrlByAssign(self, assign:str, **wargs):
         if isinstance(assign, models.assign):
-            uuid = await sync_to_async(lambda: assign.uuid)
+            uuid = await sync_to_async(lambda: assign.uuid)()
         else:
             uuid = assign
         return await self.backend.agetURL(uuid, **wargs)
     async def aassignExists(self, assign:models.assign)->bool:
         if isinstance(assign, models.assign):
-            uuid = await sync_to_async(lambda: assign.uuid)
+            uuid = await sync_to_async(lambda: assign.uuid)()
         else:
             uuid = assign
         assigns = await self.backend.agetAllAssigns()
@@ -49,15 +49,15 @@ class NodeService:
         return await self.backend.agetAllAssigns()
     async def acreateAssign(self, assign:models.assign):
         if isinstance(assign, models.assign):
-            uuid = await sync_to_async(lambda: assign.uuid)
+            uuid = await sync_to_async(lambda: assign.uuid)()
         else:
             uuid = assign
             assign = await models.assign.objects.aget(uuid=uuid)
-            tag = await sync_to_async(lambda: assign.subscribe.api_pk)
+            tag = await sync_to_async(lambda: assign.subscribe.api_pk)()
         return await self.backend.aaddSubscription(uuid, tag=tag)
     async def adeleteAssign(self, assign:models.assign):
         if isinstance(assign, models.assign):
-            uuid = await sync_to_async(lambda: assign.uuid)
+            uuid = await sync_to_async(lambda: assign.uuid)()
         else:
             uuid = assign
         return await self.backend.adeleteSubscription(uuid)
