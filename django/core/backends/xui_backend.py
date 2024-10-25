@@ -79,7 +79,7 @@ class api:
             data = obj['clientStats']
             await cache.aset(cache_key, data, 5*60)
         return data
-    async def aCreateClient(self, uuid):
+    async def aCreateClient(self, uuid, tag=''):
         import json
         url = f"{self.address}/panel/inbound/addClient"
         data = {
@@ -89,7 +89,7 @@ class api:
                     {
                         "id": uuid,
                         "flow": "",
-                        "email": f"mewray{sha256(bytes(uuid, 'UTF-8')).hexdigest()}",
+                        "email": f"mewray{tag}{sha256(bytes(uuid, 'UTF-8')).hexdigest()}",
                         "limitIp": 0,
                         "totalGB": 0,
                         "expiryTime": 0,
@@ -217,8 +217,8 @@ class XUIBackend(baseNodeBackend):
         )
         await cache.aset(cacheId, cached, 60)
         return cached
-    async def aaddSubscription(self, uuid):
-        return await self.api.aCreateClient(uuid)
+    async def aaddSubscription(self, uuid, tag=''):
+        return await self.api.aCreateClient(uuid, tag=tag)
     async def adeleteSubscription(self, uuid):
         return await self.api.aDeleteClient(uuid)
     async def agetURL(self, uuid, name=""):

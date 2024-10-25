@@ -27,7 +27,7 @@ class baseNodeBackend:
         raise
     async def agetAllAssigns(self):
         raise
-    async def aaddSubscription(self, uuid):
+    async def aaddSubscription(self, uuid, tag=''):
         raise
     async def adeleteSubscription(self, uuid):
         raise

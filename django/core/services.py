@@ -52,7 +52,9 @@ class NodeService:
             uuid = await sync_to_async(lambda: assign.uuid)
         else:
             uuid = assign
-        return await self.backend.aaddSubscription(uuid)
+            assign = await models.assign.objects.aget(uuid=uuid)
+            tag = await sync_to_async(lambda: assign.subscribe.api_pk)
+        return await self.backend.aaddSubscription(uuid, tag=tag)
     async def adeleteAssign(self, assign:models.assign):
         if isinstance(assign, models.assign):
             uuid = await sync_to_async(lambda: assign.uuid)
