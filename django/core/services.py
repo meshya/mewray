@@ -27,18 +27,38 @@ class NodeService:
         await task(assign.id)
         return "CREATING"
     async def agetReportByAssign(self, assign) -> AssignReport:
-        return await self.backend.agetReportByAssign(assign.uuid)
+        if isinstance(assign, models.assign):
+            uuid = await sync_to_async(lambda: assign.uuid)
+        else:
+            uuid = assign
+        return await self.backend.agetReportByAssign(uuid)
     async def agetUrlByAssign(self, assign:str, **wargs):
-        return await self.backend.agetURL(assign, **wargs)
+        if isinstance(assign, models.assign):
+            uuid = await sync_to_async(lambda: assign.uuid)
+        else:
+            uuid = assign
+        return await self.backend.agetURL(uuid, **wargs)
     async def aassignExists(self, assign:models.assign)->bool:
+        if isinstance(assign, models.assign):
+            uuid = await sync_to_async(lambda: assign.uuid)
+        else:
+            uuid = assign
         assigns = await self.backend.agetAllAssigns()
-        return assign.uuid in assigns
+        return uuid in assigns
     async def agetAssignAll(self)->list[str]:
         return await self.backend.agetAllAssigns()
     async def acreateAssign(self, assign:models.assign):
-        return await self.backend.aaddSubscription(assign.uuid)
+        if isinstance(assign, models.assign):
+            uuid = await sync_to_async(lambda: assign.uuid)
+        else:
+            uuid = assign
+        return await self.backend.aaddSubscription(uuid)
     async def adeleteAssign(self, assign:models.assign):
-        return await self.backend.adeleteSubscription(assign.uuid)
+        if isinstance(assign, models.assign):
+            uuid = await sync_to_async(lambda: assign.uuid)
+        else:
+            uuid = assign
+        return await self.backend.adeleteSubscription(uuid)
 
 class SubscriptionService:
     def __init__(self, sub:models.subscribe):

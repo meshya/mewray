@@ -21,7 +21,7 @@ class baseNodeBackend:
         return a2s(self.adeleteSubscription)()
     def getURL(self, subpk):
         return a2s(self.agetURL)()
-    async def getReportByAssign(self, uuid) -> AssignReport:
+    async def agetReportByAssign(self, uuid) -> AssignReport:
         raise
     async def agetAllReport(self):
         raise
