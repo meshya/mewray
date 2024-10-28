@@ -118,5 +118,5 @@ class vless(BaseProtocol):
         return base
 
 class EmptyConfig(Config):
-    def __init__(self, name):
+    def __init__(self, name=''):
         super().__init__(protocol='vless', address='xxx.xxx', connection='tcp', name=name, id='xxx')

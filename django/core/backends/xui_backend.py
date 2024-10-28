@@ -1,4 +1,3 @@
-from typing import Any
 from .base import baseNodeBackend, AssignNotSynced
 from core.models import AssignReport
 from django.core.cache import cache
@@ -12,22 +11,24 @@ import pymewess
 import json
 import ssl
 import urllib.parse as urlParse
+from repo import models
+from utils.cache import Cache
 
 proxy = "http://127.0.0.1:8080"
 ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 request_arguments={
-#    'proxy': proxy,   
+    'proxy': proxy,   
     'ssl': ssl_context
 }
 
-
 class ConnectionError(Exception): ...
 
+def email(name, uuid):
+    return f"mewray-{uuid}"
+
 class api:
-
-
     def __init__(self, cacheId, auth, address, inboundId):
         self.cacheId = cacheId
         self.auth = auth
@@ -79,21 +80,19 @@ class api:
             data = obj['clientStats']
             await cache.aset(cache_key, data, 5*60)
         return data
-    async def aCreateClient(self, uuid, tag=''):
-        import json
-        url = f"{self.address}/panel/inbound/addClient"
-        data = {
+    async def _getClientData(self, uuid, enabled=True, tag=''):
+            return {
             "id": self.Id,
-            "settings": json.dumps( {
+            "settings": await s2a(json.dumps)( {
                 "clients": [
                     {
                         "id": uuid,
                         "flow": "",
-                        "email": f"mewray{tag}{sha256(bytes(uuid, 'UTF-8')).hexdigest()}",
+                        "email": email(tag, uuid),
                         "limitIp": 0,
                         "totalGB": 0,
                         "expiryTime": 0,
-                        "enable": True,
+                        "enable": enabled,
                         "tgId": "",
                         "subId": "mewray",
                         "reset": 0
@@ -101,6 +100,11 @@ class api:
                 ]
             } )
         }
+
+    async def aCreateClient(self, uuid, tag=''):
+        import json
+        url = f"{self.address}/panel/inbound/addClient"
+        data = await self._getClientData(uuid, tag=tag)
         _headers = {
             **self.headers,
             'Referer': f"{self.address}/panel/inbounds",
@@ -112,6 +116,22 @@ class api:
         }
         async with await self.getSession() as session:
             async with session.post(url, data=data, headers=_headers, **request_arguments) as resp:
+                if resp.status.__str__()[0] != "2":
+                    raise ConnectionError()
+    async def aUpdateClient(self, uuid, enabled=True, tag=''):
+        data = await self._getClientData(uuid, enabled=enabled, tag=tag)
+        _headers = {
+            **self.headers,
+            'Referer': f"{self.address}/panel/inbounds",
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": 'cors',
+            "Origin": f"{self.protocol}://{self.host}",
+            "content-type": "application/x-www-form-urlencoded; charset=UTF-8"
+        }
+        url = f"{self.address}/panel/inbound/updateClient/{uuid}"
+        async with await self.getSession() as session:
+            async with session.post(url, headers=_headers, data=data, **request_arguments) as resp:
                 if resp.status.__str__()[0] != "2":
                     raise ConnectionError()
     async def aDeleteClient(self, uuid):    
@@ -128,19 +148,16 @@ class api:
             async with session.post(url, headers=_headers, **request_arguments) as resp:
                 if resp.status.__str__()[0] != "2":
                     raise ConnectionError()
+    @Cache('XUI_{cacheId}_inbound_check', 10)
     async def aGetInbound(self):
-        cacheKey = f"XUI_{self.cacheId}_inbound_check"
-        cached = await cache.aget(cacheKey)
-        if cached :
-            return cached
         url = f"{self.address}/panel/inbound/list"
         async with await self.getSession() as session:
             async with session.post(url, headers=self.headers, **request_arguments) as resp:
                 json = await resp.json()
-                inboundfilter = filter(lambda x: x['id'] == self.Id, json['obj'])
-                inbound = inboundfilter.__iter__().__next__()
-                await cache.aset(cacheKey, inbound, 10)
-                return inbound
+        inboundfilter = filter(lambda x: x['id'] == self.Id, json['obj'])
+        inbound = inboundfilter.__iter__().__next__()
+        return inbound
+    @Cache('XUI_{cacheId}_inboundlist', 30)
     async def aGetList(self):
         from json import loads
         inbound = await self.aGetInbound()
@@ -158,12 +175,12 @@ class XUIBackend(baseNodeBackend):
         XUI_{id}_
     '''
 
-    def __init__(self, address, host, auth, settings):
-        auth = json.loads(auth)
-        settings = json.loads(settings)
-        super().__init__(address, host, auth, settings)
+    def __init__(self, node):
+        super().__init__(node)
+        self.auth = json.loads(self.auth)
+        self.setting = json.loads(self.setting)
         self._cacheId = None
-        self.api = api(self.cacheId, auth, address, settings['id'])
+        self.api = api(self.cacheId, self.auth, self.address, self.setting['id'])
 
     @property
     def cacheId(self):
@@ -172,56 +189,27 @@ class XUIBackend(baseNodeBackend):
             buffer = bytes(buffer, 'UTF-8')
             self._cacheId = sha256(buffer).hexdigest()
         return self._cacheId
-
-    def email(self, uuid):
-        return f"mewray{sha256(bytes(uuid, 'UTF-8')).hexdigest()}"
-
-    async def agetReportByAssign(self, uuid) -> AssignReport:
+    async def email(self, uuid):
+        return email(uuid)
+    async def atraffic(self, uuid):
         reps = await self.api.agetReportAll()
-        email = self.email(uuid)
+        email = await self.email(uuid)
         Filter = filter(lambda x: x['email'] == email ,reps)
         List = list(Filter)
         if not List.__len__():
             raise AssignNotSynced(uuid)
         rep = List[0]
-        return self._convertReport(rep)
-
-    def _convertReport(self, rep)->AssignReport:
-        report = AssignReport()
-        report.Connections = 0
-        report.Traffic = traffic(
+        return await traffic(
             rep['up'] + rep['down'], suffix="B"
         )
-        return report
-
-
-    async def agetAllReport(self):
-        reports = await self.api.agetReportAll()
-        return list(
-            map(
-                self._convertReport,
-                reports
-            )
-        )
-    async def agetAllAssigns(self):
-        cacheId = f'XUI_{self.cacheId}_AllAssigns'
-        cached = await cache.aget(cacheId)
-        if cached:
-            return cached
+    async def aexists(self, uuid):
         subs = await self.api.aGetList()
-        cached = list(
-            map(
-                lambda x: x['id'],
-                subs
-            )
-        )
-        await cache.aset(cacheId, cached, 60)
-        return cached
-    async def aaddSubscription(self, uuid, tag=''):
-        return await self.api.aCreateClient(uuid, tag=tag)
-    async def adeleteSubscription(self, uuid):
+        return uuid in map(lambda x: x['id'], subs)
+    async def aadd(self, uuid):
+        return await self.api.aCreateClient(uuid)
+    async def aremove(self, uuid):
         return await self.api.aDeleteClient(uuid)
-    async def agetURL(self, uuid, name=""):
+    async def aconfig(self, uuid):
         settings = await self._agetSetting()
         config = pymewess.Config(
             address=f"{self.host}:{settings['port']}",
@@ -229,7 +217,6 @@ class XUIBackend(baseNodeBackend):
             security=settings['security'],
             protocol=settings['protocol'],
             id=uuid,
-            name=name
         )
         if 'realitySettings' in settings:
             config._set(
@@ -242,14 +229,37 @@ class XUIBackend(baseNodeBackend):
                 config._set(
                     spx=urlParse.quote(settings['realitySettings']['settings']["spiderX"], safe='')
                 )
-        return config.url()
+        return config
+    @Cache('XUI_{cacheId}_setting', 20*60)
     async def _agetSetting(self):
-        cachekey = f"XUI_{self.cacheId}_setting"
-        cached = await cache.aget(cachekey)
-        if cached is None:
-            inbound = await self.api.aGetInbound()
-            cached = await s2a(json.loads)(inbound['streamSettings'])
-            cached['protocol'] = inbound['protocol']
-            cached['port'] = inbound['port']
-            await cache.aset(cachekey, cached, 20*60)
+        inbound = await self.api.aGetInbound()
+        cached = await s2a(json.loads)(inbound['streamSettings'])
+        cached['protocol'] = inbound['protocol']
+        cached['port'] = inbound['port']
         return cached
+    async def aenable(self, uuid):
+        return await self.api.aUpdateClient(
+            uuid,
+            enabled=True,
+        )
+    async def adisable(self, uuid):
+        return await self.api.aUpdateClient(
+            uuid,
+            enabled=False,
+        )
+    async def aisEnable(self, uuid):
+        subs = await self.api.aGetList()
+        _setting = filter(lambda x: x['id']==uuid, subs)
+        try:
+            setting = next(iter(_setting))
+        except StopIteration:
+            raise AssignNotSynced(uuid)
+        return setting['enable']
+    async def aall(self):
+        List = await self.api.aGetList()
+        return list(
+            map(
+                lambda x:x['id'],
+                List
+            )
+        )

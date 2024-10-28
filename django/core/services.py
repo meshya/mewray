@@ -1,108 +1,54 @@
 from repo import models
 from .backends import getBackend
-from .models import AssignReport
-from traffic import traffic
 from .backends.base import baseNodeBackend
-from asgiref.sync import sync_to_async, async_to_sync
-from celery import shared_task
-from django.core.cache import cache
-from traffic import traffic
-import time
-
+from utils.cache import Cache
+from utils.sync import run_multiple_task
+from asgiref.sync import async_to_sync
 
 class NodeService:
     def __init__(self, node:models.node):
         self.dbObj = node
         self.backend:baseNodeBackend = getBackend(node.backend)(
-            self.dbObj.address,
-            self.dbObj.host,
-            self.dbObj.auth,
-            self.dbObj.settings
+            self.dbObj
         )
-    async def amakeSureExists(self, assign:models.assign):
-        state = await self.aassignExists(assign)
-        if state:
-            return "CREATED"
-        task = sync_to_async(_create_assign.delay)
-        await task(assign.id)
-        return "CREATING"
-    async def agetReportByAssign(self, assign) -> AssignReport:
-        if isinstance(assign, models.assign):
-            uuid = await sync_to_async(lambda: assign.uuid)()
-        else:
-            uuid = assign
-        return await self.backend.agetReportByAssign(uuid)
-    async def agetUrlByAssign(self, assign:str, **wargs):
-        if isinstance(assign, models.assign):
-            uuid = await sync_to_async(lambda: assign.uuid)()
-        else:
-            uuid = assign
-        return await self.backend.agetURL(uuid, **wargs)
-    async def aassignExists(self, assign:models.assign)->bool:
-        if isinstance(assign, models.assign):
-            uuid = await sync_to_async(lambda: assign.uuid)()
-        else:
-            uuid = assign
-        assigns = await self.backend.agetAllAssigns()
-        return uuid in assigns
-    async def agetAssignAll(self)->list[str]:
-        return await self.backend.agetAllAssigns()
-    async def acreateAssign(self, assign:models.assign):
-        if isinstance(assign, models.assign):
-            uuid = await sync_to_async(lambda: assign.uuid)()
-        else:
-            uuid = assign
-            assign = await models.assign.objects.aget(uuid=uuid)
-            tag = await sync_to_async(lambda: assign.subscribe.api_pk)()
-        return await self.backend.aaddSubscription(uuid, tag=tag)
-    async def adeleteAssign(self, assign:models.assign):
-        if isinstance(assign, models.assign):
-            uuid = await sync_to_async(lambda: assign.uuid)()
-        else:
-            uuid = assign
-        return await self.backend.adeleteSubscription(uuid)
+    def removeuuid(self, uuid):
+        return async_to_sync(self.aremoveuuid)(uuid)
+    async def aadd(self, assign):
+        return await self.backend.aadd(assign.uuid)
+    async def aremove(self, assign):
+        return await self.backend.aremove(assign.uuid)
+    async def aremoveuuid(self, uuid):
+        return await self.backend.aremove(uuid)
+    async def aexists(self, assign):
+        return await self.backend.aexists(assign.uuid)
+    async def aisEnable(self, assign):
+        return await self.backend.aisEnable(assign.uuid)
+    async def aenable(self, assign):
+        return await self.backend.aenable(assign.uuid)
+    async def adisable(self, assign):
+        return await self.backend.adisable(assign.uuid)
+    async def atraffic(self, assign):
+        return await self.backend.atraffic(assign.uuid)
+    async def aconfig(self, assign):
+        return await self.backend.aconfig(assign.uuid)
+    async def aall(self):
+        return await self.backend.aall()
 
 class SubscriptionService:
     def __init__(self, sub:models.subscribe):
         self.dbObj = sub
-    async def get_used_traffic(self, timeout=None):
-        cacheKey = f'subs_{self.dbObj.id}_traffic'
-        Traffic = await cache.aget(cacheKey, None)
-        if Traffic is None:
-            task = await sync_to_async(_get_used_traffic.delay)(self.dbObj.id, cacheKey)
-            start_waiting = time.time()
-            while timeout is None or time.time() - start_waiting < timeout:
-                state = task.state
-                if state == "FAILURE":
-                    raise RuntimeError()
-                if state == "SUCCESS":
-                    Traffic = task.result
-                    break
-            if Traffic is None:
-                raise TimeoutError()
-        if Traffic is None:
-            return traffic(0)
-        return Traffic
-
-@shared_task(trail=True)
-def _get_used_traffic(subId, cacheKey):
-    subq = models.subscribe.objects.filter(id=subId)
-    if not subq.exists():
-        return None
-    sub = subq.first()
-    assigns = models.assign.objects.filter(subscribe=sub)
-    traffics = traffic(0)
-    for i in assigns.iterator():
-        node = i.node
-        service = NodeService(node)
-        rep = async_to_sync(service.agetReportByAssign)(i)
-        traffics += rep.Traffic
-    cache.set(cacheKey, traffics, 60)
-    return traffics
-
-@shared_task(trail=True)
-def _create_assign(assignId):
-    assign = models.assign.objects.get(id=assignId)
-    ns = NodeService(assign.node)
-    task = async_to_sync(ns.acreateAssign)
-    return task(assign)
+        self.cacheId = sub.id
+    @Cache('sub_{cacheId}_traffic', 30)
+    async def atraffic(self):
+        traffics = []
+        tasks = []
+        assigns = models.assign.objects.filter(subscribe=self.dbObj)
+        async def getTraffic(assign:models.assign):
+            node = assign.node
+            nodeService = NodeService(node)
+            traf = await nodeService.atraffic()
+            traffics.append(traf)
+        async for assign in assigns:
+            tasks.append(getTraffic(assign))
+        await run_multiple_task(tasks, 1)
+        return sum(traffics)

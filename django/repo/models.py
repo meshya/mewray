@@ -1,8 +1,13 @@
 from django.db import models
 from traffic.fields import TrafficField
+from asgiref.sync import sync_to_async
+
+class BaseModel:
+    async def aget(self, name):
+        return await sync_to_async(getattr)(self, name)
 
 
-class subscribe(models.Model):
+class subscribe(models.Model, BaseModel):
     id = models.BigAutoField(primary_key=True)
     api_pk = models.CharField(max_length=36)
     view_pk = models.CharField(max_length=36)
@@ -16,7 +21,7 @@ class subscribe(models.Model):
     def __str__(self):
         return f'{self.api_pk}->{self.view_pk}'
 
-class plan(models.Model):
+class plan(models.Model, BaseModel):
     id = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=10)
     node_number = models.IntegerField()
@@ -28,7 +33,7 @@ class plan(models.Model):
         return f'{self.name}: {self.id}'
 
 
-class node(models.Model):
+class node(models.Model, BaseModel):
     id = models.BigAutoField(primary_key=True)
     backend = models.CharField(max_length=10, default='XUI')
     address = models.CharField(max_length=50)
@@ -47,7 +52,7 @@ def assign_on_node_delete(collector, field, sub_objs, using):
     models.SET_NULL(collector, field, sub_objs, using)
     collector.add_field_update(assign.enable, False, sub_objs)
 
-class assign(models.Model):
+class assign(models.Model, BaseModel):
     id = models.BigAutoField(primary_key=True)
     subscribe = models.ForeignKey(subscribe, on_delete=models.CASCADE)
     node = models.ForeignKey(node, on_delete=assign_on_node_delete)

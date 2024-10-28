@@ -20,9 +20,5 @@ COPY requirements.txt /mewray/
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 
-RUN python manage.py migrate
-RUN python manage.py inituser
-
-
 # Default command to run your Django app using gunicorn
 CMD ["bash", "-c", "daphne mewray.asgi:application -b 0.0.0.0 -p 8000 & celery -A core beat --loglevel=info & celery -A core worker --loglevel=info"]

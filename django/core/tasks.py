@@ -6,58 +6,23 @@ from core.services import SubscriptionService, NodeService
 from asgiref.sync import sync_to_async, async_to_sync
 from datetime import datetime
 from traffic import traffic
-import asyncio
+from utils.sync import run_multiple_task
 
-async def run_multiple_task(tasks, chunk=1, delay=0):
-    runThisTasks = []
-    taskIter = iter(tasks)
-    allTasksDone = False
-    errors = []
-    while not allTasksDone:
-        try:
-            for _ in range(chunk):    
-                _task = next(taskIter)
-                async def task():
-                    try:
-                        await _task
-                    except Exception as e:
-                        errors.append(e)
-                runThisTasks.append(task())
-        except (StopAsyncIteration, StopIteration):
-            allTasksDone = True
-        if tasks:
-            await asyncio.sleep(delay)
-            await asyncio.gather(*runThisTasks)
-        runThisTasks = []
-    if errors:
-        if len(errors) > 1:
-            errorStr = '\n,'.join(map(str, errors))
-            error = Exception(f"Multiple errors: {errorStr}")
-        else:
-            error = errors[0]
-        raise error
-
-
-async def acheck_subscription_assigns(subid):
-    if not isinstance(subid, models.subscribe):
-        try:
-            sub = await models.subscribe.objects.aget(id=subid)
-        except models.subscribe.DoesNotExist:
-            return
-    else:
-        sub = subid
+async def sync_sub(sub):
     asignq = models.assign.objects.filter(subscribe=sub, enable=True, node__enable=True)
     count = await asignq.acount()
     nodeq = models.node.objects.filter()
     subNodeNumber = await sync_to_async(getattr)(sub,'node_number')
     nodeCount = await nodeq.acount()
     changedNodes = []
+    tasks=[]
     while count > subNodeNumber:
         deleting = await asignq.afirst()
         changingNode = await sync_to_async(getattr)(deleting, 'node')
         if changingNode not in changedNodes:
             changedNodes.append(changingNode)
-        await deleting.adelete()
+        deleting.enable = False
+        await deleting.asave()
         count -= 1
     if count < subNodeNumber and count < nodeCount:
         availableNodes = models.node.objects.filter(
@@ -84,66 +49,56 @@ async def acheck_subscription_assigns(subid):
                 node=node,
                 uuid=uuid
             )
-            await sync_to_async(check_assign_backend.delay)(assign.id)
+            task = sync_to_async(check_assign_backend.delay)(assign.id)
+            tasks.append(task)
             count += 1
         for changedNode in changedNodes:
             nodeId = await sync_to_async(getattr)(changedNode, 'id')
-            await sync_to_async(check_backend_assign.delay)(nodeId)
+            task = sync_to_async(check_backend_assign.delay)(nodeId)
+            tasks.append(task)
+    await run_multiple_task(tasks, 100)
 
-async def acheck_assign_backend(assignid):
-    if not isinstance(assignid, models.assign):
-        try:
-            assign = await models.assign.objects.aget(id=assignid, enable=True)
-        except models.assign.DoesNotExist:
-            return
-    else:
-        assign = assignid
-    node = await sync_to_async(getattr)(assign, "node")
+async def sync_node(node):
+    assignq = models.assign.objects.filter(node=node)
     service = NodeService(node)
-    if not await service.aassignExists(assign):
-        await service.acreateAssign(assign)
+    tasks = []
+    async def r2l(assign):
+        await sync_assign(assign, node=node)
+    async def l2r(uuid):
+        if not await models.assign.objects.filter(uuid=uuid).aexists():
+            await service.aremoveuuid(uuid)
+    async for assign in assignq:
+        tasks.append(r2l(assign))
+    for uuid in await service.aall():
+        tasks.append(l2r(uuid))
+    await run_multiple_task(tasks, 10)
 
-async def acheck_backend_assign(nodeId):
-    if not isinstance(nodeId, models.node):
-        try:
-            node = await models.node.objects.aget(id=nodeId)
-        except models.node.DoesNotExist:
-            return
-    else:
-        node = nodeId
+async def sync_assign(assign, node=None):
+    if node is None:
+        node = assign.node
     service = NodeService(node)
-    backend_assigns = await service.agetAssignAll()
-    for i in backend_assigns:
-        if not await models.assign.objects.filter(uuid=i, enable=True).aexists():
-            await service.adeleteAssign(i)
+    if not await service.aexists(assign):
+        await service.aadd(assign)
+        return
+    localEnable = assign.enable
+    nodeEnable = await service.aisEnable(assign)
+    if localEnable != nodeEnable:
+        if localEnable:
+            await service.aenable(assign)
+        else:
+            await service.adisable(assign)
 
-async def acheck_subscription_time_and_traffic(subid):
-    if not isinstance(subid, models.subscribe):
-        try:
-            sub = await models.subscribe.objects.aget(id=subid)
-        except models.subscribe.DoesNotExist:
-            return
-    else:
-        sub = subid
+async def check_sub(sub):
     service = SubscriptionService(sub)
     newEnable = enable = await sync_to_async(getattr)(sub, 'enable')
     usedTraffic = None
     error = None
-    for _ in range(3):
-        try:
-            usedTraffic = await service.get_used_traffic()
-            break
-        except RuntimeError as e:
-            error = e
-            continue
-    if usedTraffic is None:
-        error = error or RuntimeError(f"Not able to calc used traffic of {sub.__str__()}")
-        raise error
+    usedTraffic = await service.atraffic()
     subTraffic = await sync_to_async(getattr)(sub, 'traffic')
     now = datetime.now()
     newStartDate = startDate = await sync_to_async(getattr)(sub, 'start_date')
     period = await sync_to_async(getattr)(sub, 'period')
-    assignq = models.assign.objects.filter(subscribe=sub, enable=True)
+    assignq = models.assign.objects.filter(subscribe=sub)
     end = datetime(
         day=startDate.day,
         month=startDate.month,
@@ -151,120 +106,163 @@ async def acheck_subscription_time_and_traffic(subid):
     ) + period
     if now > end:
         newStartDate = now
-        async for assign in assignq.aiterator():
-            await assign.adelete()
+        newEnable = True
         usedTraffic = traffic(0)
+        await assignq.adelete()
     if enable:
         if usedTraffic > subTraffic:
             newEnable = False
-    if enable != newEnable or startDate != newStartDate:
+    if enable != newEnable or newStartDate != startDate:
         sub.enable = newEnable
         sub.start_date = newStartDate
         await sub.asave()
 
-async def acheck_node_traffic(nodeId):
-    if not isinstance(nodeId, models.node):
-        try:
-            node = await models.node.objects.aget(id=nodeId)
-        except models.node.DoesNotExist:
-            return
-    else:
-        node = nodeId
-    nodeTraffic = await sync_to_async(getattr)(node, 'max_traffic')
+@shared_task
+def sync_subs_task():
+    tasks = []
+    for sub in models.subscribe.objects.all():
+        tasks.append(sync_sub(sub))
+    async_to_sync(run_multiple_task)(tasks, 100)
+
+@shared_task
+def sync_sub_task(subId):
+    sub = models.subscribe.objects.get(id=subId)
+    async_to_sync(sync_sub)(sub)
+
+
+@shared_task
+def sync_nodes_task():
+    tasks = []
+    for node in models.node.objects.all():
+        tasks.append(sync_node(node))
+    async_to_sync(run_multiple_task)(tasks, 100)
+
+@shared_task
+def check_subs_task():
+    tasks = []
+    for sub in models.subscribe.objects.all():
+        tasks.append(check_sub(sub))
+    async_to_sync(run_multiple_task)(tasks, 100)
+
+@shared_task
+def sync_assign(assignId):
+    assign = models.assign.objects.get(id=assignId)
+    task = async_to_sync(sync_assign)
+    task(assign)
+
+@shared_task
+def remove_client_task(nodeId, uuid):
+    node = models.node.objects.get(id=nodeId)
     service = NodeService(node)
-    assignq = models.assign.objects.filter(
-        node=node
-    )
-    newEnable = enable = await sync_to_async(getattr)(node, 'enable')
-    now = datetime.now()
-    period = await sync_to_async(getattr)(node, 'period')
-    periodStart = await sync_to_async(getattr)(node, 'period_start')
-    end = datetime(
-        day=periodStart.day,
-        month=periodStart.month,
-        year=periodStart.year
-    ) + period
-    deletedAssigns = 0
-    editedNodes = 0
-    if now > end:
-        deletedAssigns += await assignq.acount()
-        await assignq.adelete()
-    usedTrafficSum = traffic(0)
-    async for assign in assignq.aiterator():
-        report = await service.agetReportByAssign(assign)
-        usedTrafficSum = usedTrafficSum + report.Traffic
-    newEnable = usedTrafficSum < nodeTraffic
-    if enable != newEnable:
-        node.enable = newEnable
-        await node.save()
-        editedNodes += 1
-        if not newEnable:
-            await sync_to_async(check_all_subscriptions_assigns.delay)()
+    service.removeuuid(uuid)
 
-async def acheck_all_subscriptions_time_and_traffic():
-    return await run_multiple_task(
-        [
-            acheck_subscription_time_and_traffic(sub) async for sub in models.subscribe.objects.all().aiterator()
-        ]
-    )
+# async def acheck_node_traffic(nodeId):
+#     if not isinstance(nodeId, models.node):
+#         try:
+#             node = await models.node.objects.aget(id=nodeId)
+#         except models.node.DoesNotExist:
+#             return
+#     else:
+#         node = nodeId
+#     nodeTraffic = await sync_to_async(getattr)(node, 'max_traffic')
+#     service = NodeService(node)
+#     assignq = models.assign.objects.filter(
+#         node=node
+#     )
+#     newEnable = enable = await sync_to_async(getattr)(node, 'enable')
+#     if not enable:
+#         return
+#     now = datetime.now()
+#     period = await sync_to_async(getattr)(node, 'period')
+#     periodStart = await sync_to_async(getattr)(node, 'period_start')
+#     end = datetime(
+#         day=periodStart.day,
+#         month=periodStart.month,
+#         year=periodStart.year
+#     ) + period
+#     if now > end:
+#         await assignq.adelete()
+#         node.enable = True
+#         await node.asave()
+#         return
+#     editedNodes = 0
+#     usedTrafficSum = traffic(0)
+#     async for assign in assignq.aiterator():
+#         report = await service.agetReportByAssign(assign)
+#         usedTrafficSum = usedTrafficSum + report.traffic
+#     newEnable = usedTrafficSum < nodeTraffic
+#     if enable != newEnable:
+#         node.enable = newEnable
+#         await node.asave()
+#         await assignq.aupdate(enable=False)
+#         editedNodes += 1
+#         if not newEnable:
+#             await sync_to_async(check_all_subscriptions_assigns.delay)()
 
-async def acheck_all_assigns():
-    return await run_multiple_task(
-        [
-            acheck_assign_backend(assign) async for assign in models.assign.objects.filter(enable=True).aiterator()
-        ]
-    )
+# async def acheck_all_subscriptions_time_and_traffic():
+#     return await run_multiple_task(
+#         [
+#             acheck_subscription_time_and_traffic(sub) async for sub in models.subscribe.objects.all().aiterator()
+#         ]
+#     )
 
-async def acheck_all_subscriptions_assigns():
-        return await run_multiple_task(
-            [
-                acheck_subscription_assigns(sub) async for sub in models.subscribe.objects.all().aiterator()
-            ]
-        )
+# async def acheck_all_assigns():
+#     return await run_multiple_task(
+#         [
+#             acheck_assign_backend(assign) async for assign in models.assign.objects.filter().aiterator()
+#         ]
+#     )
 
-async def acheck_all_nodes_traffic():
-    return await run_multiple_task(
-        [
-            acheck_node_traffic(node) async for node in models.node.objects.all().aiterator()
-        ]
-    )
+# async def acheck_all_subscriptions_assigns():
+#         return await run_multiple_task(
+#             [
+#                 acheck_subscription_assigns(sub) async for sub in models.subscribe.objects.all().aiterator()
+#             ]
+#         )
 
-async def acheck_all_nodes():
-        return await run_multiple_task(
-            [
-                acheck_backend_assign(node) async for node in models.node.objects.filter(enable=True).aiterator()
-            ]
-        )
+# async def acheck_all_nodes_traffic():
+#     return await run_multiple_task(
+#         [
+#             acheck_node_traffic(node) async for node in models.node.objects.all().aiterator()
+#         ]
+#     )
+
+# async def acheck_all_nodes():
+#         return await run_multiple_task(
+#             [
+#                 acheck_backend_assign(node) async for node in models.node.objects.filter(enable=True).aiterator()
+#             ]
+#         )
 
 
-@shared_task
-def check_all_assigns():
-    return async_to_sync(acheck_all_assigns)()
+# @shared_task
+# def check_all_assigns():
+#     return async_to_sync(acheck_all_assigns)()
 
-@shared_task
-def check_all_nodes():
-    return async_to_sync(acheck_all_nodes)()
+# @shared_task
+# def check_all_nodes():
+#     return async_to_sync(acheck_all_nodes)()
 
-@shared_task
-def check_all_nodes_traffic():
-    return async_to_sync(acheck_all_nodes_traffic)()
+# @shared_task
+# def check_all_nodes_traffic():
+#     return async_to_sync(acheck_all_nodes_traffic)()
 
-@shared_task
-def check_all_subscriptions_assigns():
-    return async_to_sync(acheck_all_subscriptions_assigns)()
+# @shared_task
+# def check_all_subscriptions_assigns():
+#     return async_to_sync(acheck_all_subscriptions_assigns)()
 
-@shared_task
-def check_all_subscriptions_time_and_traffic():
-    return async_to_sync(acheck_all_subscriptions_time_and_traffic)()
+# @shared_task
+# def check_all_subscriptions_time_and_traffic():
+#     return async_to_sync(acheck_all_subscriptions_time_and_traffic)()
 
-@shared_task
-def check_backend_assign(nodeId):
-    return async_to_sync(acheck_backend_assign)(nodeId)
+# @shared_task
+# def check_backend_assign(nodeId):
+#     return async_to_sync(acheck_backend_assign)(nodeId)
 
-@shared_task
-def check_assign_backend(assignid):
-    return async_to_sync(acheck_assign_backend)(assignid)
+# @shared_task
+# def check_assign_backend(assignid):
+#     return async_to_sync(acheck_assign_backend)(assignid)
 
-@shared_task
-def check_subscription_assigns(subid):
-    return async_to_sync(acheck_subscription_assigns)(subid)
+# @shared_task
+# def check_subscription_assigns(subid):
+#     return async_to_sync(acheck_subscription_assigns)(subid)
