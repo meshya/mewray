@@ -1,10 +1,8 @@
 from .base import baseNodeBackend, AssignNotSynced
-from core.models import AssignReport
 from django.core.cache import cache
 from hashlib import sha256
 import aiohttp
 import re
-from core.models import AssignReport
 from asgiref.sync import sync_to_async as s2a
 from traffic import traffic
 import pymewess
@@ -13,8 +11,12 @@ import ssl
 import urllib.parse as urlParse
 from repo import models
 from utils.cache import Cache
+from django.conf import settings
 
-proxy = "http://127.0.0.1:8080"
+if settings.DEBUG:
+    proxy = "http://127.0.0.1:8080"
+else:
+    proxy = None
 ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
@@ -25,7 +27,7 @@ request_arguments={
 
 class ConnectionError(Exception): ...
 
-def email(name, uuid):
+def email(uuid):
     return f"mewray-{uuid}"
 
 class api:
@@ -88,7 +90,7 @@ class api:
                     {
                         "id": uuid,
                         "flow": "",
-                        "email": email(tag, uuid),
+                        "email": email(uuid),
                         "limitIp": 0,
                         "totalGB": 0,
                         "expiryTime": 0,

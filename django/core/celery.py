@@ -9,24 +9,16 @@ app = Celery('mewray')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 app.conf.beat_schedule = {
-    'assigns': {
-        'task': 'core.tasks.check_all_assigns',
+    'nodes_sync': {
+        'task': 'core.tasks.sync_nodes_task',
         'schedule': crontab(minute=21),
     },
-    'nodes': {
-        'task': 'core.tasks.check_all_nodes',
-        'schedule': crontab(hour='*/2')
-    },
-    'subscriptions_assigns': {
-        'task': 'core.tasks.check_all_subscriptions_assigns',
+    'subs_sync': {
+        'task': 'core.tasks.sync_subs_task',
         'schedule': crontab(hour='*/5')
     },
-    'subscription_time_and_traffic':{
-        'task': 'core.tasks.check_all_subscriptions_time_and_traffic',
+    'subs_check':{
+        'task': 'core.tasks.check_subs_task',
         'schedule': crontab(hour='*/3')
     },
-    'nodes_traffic': {
-        'task': 'core.tasks.check_all_nodes_traffic',
-        'schedule': crontab(hour='*/2')
-    }
 }

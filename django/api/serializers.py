@@ -5,6 +5,7 @@ from core.services import SubscriptionService
 import uuid
 import datetime
 from asgiref.sync import async_to_sync
+from traffic import traffic
 
 
 class SubscriptionSerializer(serializers.Serializer):
@@ -22,9 +23,9 @@ class SubscriptionSerializer(serializers.Serializer):
     async def ato_representation(self, instance):
         sub = instance
         try :
-            traffic = await SubscriptionService(sub).get_used_traffic(timeout=5)
-        except (TimeoutError ,RuntimeError):
-            traffic = 0
+            traf = await SubscriptionService(sub).atraffic()
+        except:
+            traf = traffic(-1)
         return {
             "UserId": sub.api_pk,
             "ViewId": sub.view_pk,
@@ -32,7 +33,7 @@ class SubscriptionSerializer(serializers.Serializer):
             "EnableUntil": sub.start_date.timestamp() + sub.period.total_seconds(),
             "MaxConnectionCount": sub.connection_number,
             "MaxTraffic": f"{sub.traffic}M",
-            "UsedTraffic": f"{traffic}M"
+            "UsedTraffic": f"{traf}"
         }
     
 

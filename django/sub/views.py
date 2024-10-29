@@ -5,7 +5,7 @@ from asgiref.sync import sync_to_async, async_to_sync
 from rest_framework.decorators import api_view
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from .titles import NormalTitle
-from .configs import createEmptyConfig
+
 from pymewess import EmptyConfig
 
 @extend_schema(

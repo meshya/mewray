@@ -44,9 +44,9 @@ class SubscriptionService:
         tasks = []
         assigns = models.assign.objects.filter(subscribe=self.dbObj)
         async def getTraffic(assign:models.assign):
-            node = assign.node
+            node = await assign.aget('node')
             nodeService = NodeService(node)
-            traf = await nodeService.atraffic()
+            traf = await nodeService.atraffic(assign)
             traffics.append(traf)
         async for assign in assigns:
             tasks.append(getTraffic(assign))

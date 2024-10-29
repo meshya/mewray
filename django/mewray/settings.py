@@ -89,7 +89,7 @@ if USE_REDIS:
 else:
     CELERY_BROKER_URL = f"sqla+sqlite:////{BASE_DIR}/broker.sqlite3"
     CELERY_RESULT_BACKEND = f"db+sqlite:////{BASE_DIR}/results.sqlite"
-CELERY_TASK_ALWAYS_EAGER = True  # Run tasks locally without a message broker
+CELERY_TASK_ALWAYS_EAGER = DEBUG
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
