@@ -201,7 +201,7 @@ class XUIBackend(baseNodeBackend):
         if not List.__len__():
             raise AssignNotSynced(uuid)
         rep = List[0]
-        return await traffic(
+        return traffic(
             rep['up'] + rep['down'], suffix="B"
         )
     async def aexists(self, uuid):

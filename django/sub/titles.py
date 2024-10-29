@@ -28,13 +28,13 @@ class NormalTitle:
 
     async def trafficProgress(self):
         service = SubscriptionService(self.sub)
-        usedTraffic = await service.get_used_traffic()
+        usedTraffic = await service.atraffic()
         allowedTraffic = await agetattr(self.sub, 'traffic')
         if not isinstance(allowedTraffic, traffic):
-            allowedTraffic = traffic(allowedTraffic)
-        ratio = max (usedTraffic / allowedTraffic, 1)
-        freeSpace = ' '*int((ratio)*16)
-        fullSpace = '-'*int((1-ratio)*16)
+            allowedTraffic = traffic(allowedTraffic, suffix='M')
+        ratio = min (usedTraffic / allowedTraffic, 1)
+        freeSpace = ' '*int((1-ratio)*16)
+        fullSpace = '-'*int((ratio)*16)
         progress = f'<{fullSpace}{str(usedTraffic)}/{str(allowedTraffic)}{freeSpace}>'
         return progress
 

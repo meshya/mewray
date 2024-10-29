@@ -62,20 +62,20 @@ async def sync_node(node):
     assignq = models.assign.objects.filter(node=node)
     service = NodeService(node)
     tasks = []
-    async def r2l(assign):
+    async def a2n(assign):
         await sync_assign(assign, node=node)
-    async def l2r(uuid):
+    async def n2a(uuid):
         if not await models.assign.objects.filter(uuid=uuid).aexists():
             await service.aremoveuuid(uuid)
     async for assign in assignq:
-        tasks.append(r2l(assign))
+        tasks.append(a2n(assign))
     for uuid in await service.aall():
-        tasks.append(l2r(uuid))
+        tasks.append(n2a(uuid))
     await run_multiple_task(tasks, 10)
 
 async def sync_assign(assign, node=None):
     if node is None:
-        node = assign.node
+        node = await assign.aget('node')
     service = NodeService(node)
     if not await service.aexists(assign):
         await service.aadd(assign)
@@ -145,7 +145,7 @@ def check_subs_task():
     async_to_sync(run_multiple_task)(tasks, 100)
 
 @shared_task
-def sync_assign(assignId):
+def sync_assign_task(assignId):
     assign = models.assign.objects.get(id=assignId)
     task = async_to_sync(sync_assign)
     task(assign)

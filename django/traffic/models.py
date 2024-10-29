@@ -14,7 +14,7 @@ class traffic:
         amount = args[0]
         if isinstance(amount, int):
             if suffix:
-                amount = traffic._from_suffix(amount, suffix)
+                amount = traffic._using_suffix(amount, suffix)
             self.bytes = amount
         elif isinstance(amount, str):
             self.bytes = traffic._from_string(amount)
@@ -55,7 +55,7 @@ class traffic:
         i = 0
         _bytes = self.bytes
         while _bytes >= 1024 and i < len(size_units) - 1:
-            size_bytes /= 1024
+            _bytes /= 1024
             i += 1
         _bytes = str(f"{_bytes:.2f}").replace('0', ' ').strip().replace(' ', '0')
         if _bytes[-1] == '.':

@@ -4,6 +4,7 @@ from .backends.base import baseNodeBackend
 from utils.cache import Cache
 from utils.sync import run_multiple_task
 from asgiref.sync import async_to_sync
+from traffic import traffic
 
 class NodeService:
     def __init__(self, node:models.node):
@@ -51,4 +52,6 @@ class SubscriptionService:
         async for assign in assigns:
             tasks.append(getTraffic(assign))
         await run_multiple_task(tasks, 1)
-        return sum(traffics)
+        trafficSum = traffic(0)
+        for t in traffics: trafficSum+=t
+        return trafficSum
