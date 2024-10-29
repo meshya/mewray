@@ -62,9 +62,11 @@ class SubscriptionsAPIView(APIView):
                 HttpStatus=404
             )
         sub = await q.afirst()
-        assigns = models.assign.objects.filter(subscribe=sub)
-        async for assign in assigns:
-            await sync_to_async(tasks.remove_client_task.delay)(assign.uuid)
+        try:
+            assigns = models.assign.objects.filter(subscribe=sub)
+            async for assign in assigns:
+                await sync_to_async(tasks.remove_client_task.delay)(assign.id)
+        except: ...
         await sub.adelete()
         return await makeResponse(
             ResponseSerializer(status=0),

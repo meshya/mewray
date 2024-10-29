@@ -151,10 +151,11 @@ def sync_assign_task(assignId):
     task(assign)
 
 @shared_task
-def remove_client_task(nodeId, uuid):
-    node = models.node.objects.get(id=nodeId)
+def remove_client_task(assignId):
+    assign = models.assign.objects.get(id=assignId)
+    node = assign.node
     service = NodeService(node)
-    service.removeuuid(uuid)
+    service.removeuuid(assign.uuid)
 
 # async def acheck_node_traffic(nodeId):
 #     if not isinstance(nodeId, models.node):
