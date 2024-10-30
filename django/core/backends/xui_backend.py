@@ -228,7 +228,7 @@ class XUIBackend(baseNodeBackend):
             )
             if "spiderX" in settings['realitySettings']['settings']:
                 config._set(
-                    spx=settings['realitySettings']['settings']["spiderX"], safe=''
+                    spx=settings['realitySettings']['settings']["spiderX"]
                 )
         return config
     @Cache('XUI_{cacheId}_setting', 20*60)
