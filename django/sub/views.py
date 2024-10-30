@@ -1,6 +1,6 @@
 from django.http import HttpRequest, HttpResponse, HttpResponseNotFound
 from repo.models import subscribe, assign
-from core.services import NodeService
+from core.services import NodeService, AssignNotSynced
 from asgiref.sync import sync_to_async, async_to_sync
 from rest_framework.decorators import api_view
 from drf_spectacular.utils import extend_schema, OpenApiExample
@@ -44,10 +44,14 @@ async def renderSub(request, viewId, titleGenerator):
         node = await sync_to_async(getattr)(i, 'node')
         nodeService = NodeService(node)
         assignStatus = await nodeService.aexists(i)
-        if assignStatus :
-            title = await titleGenerator(sub).title()
-            config = await nodeService.aconfig(i)
-        else:
+        try:
+            if assignStatus :
+                title = await titleGenerator(sub).title()
+                config = await nodeService.aconfig(i)
+            else:
+                title = "Creating config, reload this sub 1min later"
+                config = EmptyConfig()
+        except AssignNotSynced:
             title = "Creating config, reload this sub 1min later"
             config = EmptyConfig()
         config._set(name=title)

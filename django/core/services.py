@@ -1,5 +1,5 @@
 from repo import models
-from .backends import getBackend
+from .backends import getBackend, AssignNotSynced
 from .backends.base import baseNodeBackend
 from utils.cache import Cache
 from utils.sync import run_multiple_task
