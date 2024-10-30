@@ -69,6 +69,10 @@ class traffic:
         if not isinstance(other, type(self)):
             other = type(self)(other)
         return type(self)(self.bytes+other.bytes)
+    def __sub__(self, other):
+        if not isinstance(other, type(self)):
+            other = type(self)(other)
+        return type(self)(self.bytes-other.bytes)
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
             other = type(self)(other)
