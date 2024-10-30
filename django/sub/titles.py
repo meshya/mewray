@@ -52,8 +52,9 @@ class HiddifyTitle:
         service = SubscriptionService(self.sub)
         usedTraffic = await service.atraffic()
         allowedTraffic = await agetattr(self.sub, 'traffic')
+        if not isinstance(allowedTraffic, traffic):
+            allowedTraffic = traffic(allowedTraffic, suffix='M')
         usableTraffic = allowedTraffic - usedTraffic
-        
         startDate = await agetattr(self.sub, 'start_date')
         start = datetime(
             day=startDate.day,
