@@ -68,4 +68,4 @@ class HiddifyTitle:
 
         name = await agetattr(self.sub, 'api_pk')
 
-        return f'{name}-{str(usableTraffic)}-{str(remainsAtDays)}D'
+        return f'{name}-{str(usableTraffic)}📊-{str(remainsAtDays)}D⏳'
