@@ -21,13 +21,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-&ygc++d&z0%e5q5lt2zy^uxf!215x@(7c0a7op=(c#9aaa6mb('
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('MEWRAY_DEBUG', 'true') == 'true'
 DISABLE_CACHE = os.environ.get('MEWRAY_DISABLE_CACHE', 'false') == 'true'
+DEBUG_PROXY = os.environ.get('DEBUG_PROXY', None)
 REDIS_CONNECTION = os.environ.get('REDIS_CONNECTION', None)
 USE_REDIS = True if REDIS_CONNECTION else False
+
+if DEBUG:
+    SECRET_KEY = 'django-insecure-&ygc++d&z0%e5q5lt2zy^uxf!215x@(7c0a7op=(c#9aaa6mb('
+else:
+    SECRET_KEY = os.environ.get('MEWRAY_SECRET_KEY', '')
 
 HOST_NAME = os.environ.get('HOST_NAME', 'localhost')
 

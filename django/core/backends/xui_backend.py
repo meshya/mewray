@@ -12,8 +12,8 @@ from repo import models
 from utils.cache import Cache
 from django.conf import settings
 
-if settings.DEBUG:
-    proxy = "http://127.0.0.1:8080"
+if settings.DEBUG_PROXY:
+    proxy = settings.DEBUG_PROXY
 else:
     proxy = None
 ssl_context = ssl.create_default_context()
