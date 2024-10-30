@@ -63,7 +63,7 @@ class HiddifyTitle:
         )
         now = datetime.now()
         full = await agetattr(self.sub, 'period')
-        remains = full - now
+        remains = (start + full) - now
         remainsAtDays = int(remains.total_seconds() / (24 * 3600))
 
         name = await agetattr(self.sub, 'api_pk')
