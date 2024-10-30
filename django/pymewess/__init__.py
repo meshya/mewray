@@ -1,5 +1,4 @@
-
-from typing import Any
+import urllib.parse as urlParse
 
 class BaseProtocol:
     all = []
@@ -27,7 +26,8 @@ class Config:
         "sslpubkey",
         "shortid",
         'serviceName',
-        'authority'
+        'authority',
+        'spx'
     ]
     __spec__ = [
         *_attrs
@@ -83,7 +83,7 @@ class Config:
             authority='',
             spx=''
             ):
-        
+
         if protocol:
             if isinstance(protocol, str):
                 protocol = BaseProtocol.get(protocol)()
@@ -104,6 +104,10 @@ class Config:
         self.authority = authority or getattr(self, "authority", '')
         self.spx = spx or getattr(self, "spx", '')
 
+        if spx:
+            self.spx = urlParse.quote(spx, safe='')
+        if name:
+            self.name = urlParse.quote(name, safe='')
 
 class vless(BaseProtocol):
     def url(self, config: Config):

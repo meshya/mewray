@@ -8,7 +8,6 @@ from traffic import traffic
 import pymewess
 import json
 import ssl
-import urllib.parse as urlParse
 from repo import models
 from utils.cache import Cache
 from django.conf import settings
@@ -229,7 +228,7 @@ class XUIBackend(baseNodeBackend):
             )
             if "spiderX" in settings['realitySettings']['settings']:
                 config._set(
-                    spx=urlParse.quote(settings['realitySettings']['settings']["spiderX"], safe='')
+                    spx=settings['realitySettings']['settings']["spiderX"], safe=''
                 )
         return config
     @Cache('XUI_{cacheId}_setting', 20*60)
