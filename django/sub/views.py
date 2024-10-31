@@ -28,11 +28,6 @@ from pymewess import EmptyConfig
 def subcribeView(request:HttpRequest, ViewId):
     return async_to_sync(renderSub)(request, ViewId, NormalTitle)
 
-@api_view(['GET'])
-def hiddifySubcribeView(request:HttpRequest, ViewId):
-    return async_to_sync(renderSub)(request, ViewId, HiddifyTitle)
-
-
 async def renderSub(request, viewId, titleGenerator):
     subFilter = subscribe.objects.filter(view_pk=viewId)
     if not await subFilter.aexists():

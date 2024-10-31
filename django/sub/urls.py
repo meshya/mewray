@@ -20,5 +20,4 @@ from . import views
 
 urlpatterns = [
     path('<str:ViewId>/', views.subcribeView),
-    path('<str:ViewId>/hiddify/', views.hiddifySubcribeView),
 ]

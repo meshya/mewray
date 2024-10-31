@@ -79,7 +79,7 @@ class api:
         if data is None:
             obj = await self.aGetInbound()
             data = obj['clientStats']
-            await cache.aset(cache_key, data, 5*60)
+            await cache.aset(cache_key, data, 5)
         return data
     async def _getClientData(self, uuid, enabled=True, tag=''):
             return {
@@ -149,7 +149,7 @@ class api:
             async with session.post(url, headers=_headers, **request_arguments) as resp:
                 if resp.status.__str__()[0] != "2":
                     raise ConnectionError()
-    @Cache('XUI_{cacheId}_inbound_check', 10)
+    @Cache('XUI_{cacheId}_inbound_check', 5)
     async def aGetInbound(self):
         url = f"{self.address}/panel/inbound/list"
         async with await self.getSession() as session:
@@ -158,7 +158,7 @@ class api:
         inboundfilter = filter(lambda x: x['id'] == self.Id, json['obj'])
         inbound = inboundfilter.__iter__().__next__()
         return inbound
-    @Cache('XUI_{cacheId}_inboundlist', 30)
+    @Cache('XUI_{cacheId}_inboundlist', 5)
     async def aGetList(self):
         from json import loads
         inbound = await self.aGetInbound()
