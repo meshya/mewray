@@ -4,9 +4,9 @@ from core.services import NodeService, AssignNotSynced
 from asgiref.sync import sync_to_async, async_to_sync
 from rest_framework.decorators import api_view
 from drf_spectacular.utils import extend_schema, OpenApiExample
-from .titles import NormalTitle, HiddifyTitle
-
+from .designers import Designer
 from pymewess import EmptyConfig
+
 
 @extend_schema(
     responses={
@@ -23,34 +23,13 @@ from pymewess import EmptyConfig
     auth=[],
     description="Returns config urls of this user, ATTENTION: use ViewId of Subscriptions as subid"
 )
-
 @api_view(['GET'])
 def subcribeView(request:HttpRequest, ViewId):
-    return async_to_sync(renderSub)(request, ViewId, NormalTitle)
+    return async_to_sync(renderSub)(request, ViewId)
 
-async def renderSub(request, viewId, titleGenerator):
+async def renderSub(request, viewId):
     subFilter = subscribe.objects.filter(view_pk=viewId)
     if not await subFilter.aexists():
         return HttpResponseNotFound()
     sub = await subFilter.afirst()
-    asignsQ = assign.objects.filter(subscribe=sub)
-    resp = ''
-    async for i in asignsQ.aiterator():
-        node = await sync_to_async(getattr)(i, 'node')
-        nodeService = NodeService(node)
-        assignStatus = await nodeService.aexists(i)
-        try:
-            if assignStatus :
-                title = await titleGenerator(sub).title()
-                config = await nodeService.aconfig(i)
-            else:
-                title = "Creating config, reload this sub 1min later"
-                config = EmptyConfig()
-        except AssignNotSynced:
-            title = "Creating config, reload this sub 1min later"
-            config = EmptyConfig()
-        config._set(name=title)
-        url = config.url()
-        resp += url
-    resp += ''
-    return HttpResponse(resp)
+    return await Designer(sub).design()

@@ -165,6 +165,11 @@ else:
             }
         }
 
+CACHES['mem'] = {
+    "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    "LOCATION": "unique-snowflake",
+}
+
 STATIC_URL = '/static/' 'drf_spectacular',
 
 if not True:
