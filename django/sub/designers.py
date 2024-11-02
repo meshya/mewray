@@ -7,6 +7,7 @@ from traffic import traffic
 from pymewess import EmptyConfig
 from core.backends import AssignNotSynced
 from django.http import HttpResponse
+import time
 
 class BaseDesigner:
     def __init__(self, sub:models.subscribe) -> None:
@@ -29,7 +30,18 @@ class Designer(BaseDesigner):
         remains = (start + full) - now
         remainsAtDays = int(remains.total_seconds() / (24 * 3600))
         return remainsAtDays
-    
+
+    async def end(self)->datetime:
+        startDate = await self.sub.aget('start_date')
+        start = datetime(
+            day=startDate.day,
+            month=startDate.month,
+            year=startDate.year
+        )
+        full = await self.sub.aget('period')
+        return start+full
+
+
     @Cache('disigner_{cacheId}_trp', 1, cache=caches['mem'])
     async def trafficProgress(self):
         usableTraffic = await self.traffic()
@@ -91,6 +103,7 @@ class Designer(BaseDesigner):
         days = await self.days()
         traf = await self.traffic()
         allt = await self.traffic_all()
+        end = await self.end()
         full = await self.sub.aget('period')
         assignsQ = models.assign.objects.filter(subscribe=self.sub)
         resp = ''
@@ -111,7 +124,7 @@ class Designer(BaseDesigner):
             url = config.url()
             resp += url
         headers = {
-            'subscription-userinfo': f'upload=0; download={allt.bytes - traf.bytes}; total={allt.bytes}; expire={days}',
+            'subscription-userinfo': f'upload=0; download={allt.bytes - traf.bytes}; total={allt.bytes}; expire={int(end.timestamp())}',
             'profile-update-interval': 5,
             'profile-title': name
         }
