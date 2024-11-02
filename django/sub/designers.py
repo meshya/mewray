@@ -33,7 +33,7 @@ class Designer(BaseDesigner):
     @Cache('disigner_{cacheId}_trp', 1, cache=caches['mem'])
     async def trafficProgress(self):
         usableTraffic = await self.traffic()
-        allowedTraffic = await self.sub.aget('traffic')
+        allowedTraffic = await self.traffic_all()
         ratio = min (usableTraffic / allowedTraffic, 1)
         freeSpace = ' '*int((1-ratio)*14)
         fullSpace = '-'*int((ratio)*14)
