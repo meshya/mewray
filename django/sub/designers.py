@@ -40,7 +40,7 @@ class Designer(BaseDesigner):
         progress = f'<{fullSpace}{str(usableTraffic)}/{str(allowedTraffic)}{freeSpace}>'
         return progress
 
-    @Cache('designer_{cacheId}_tmp')
+    @Cache('designer_{cacheId}_tmp', 1, cache=caches['mem'])
     async def timeProgress(self):
         startDate = await self.sub.aget('start_date')
         start = datetime(
