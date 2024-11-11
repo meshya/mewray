@@ -54,7 +54,7 @@ def assign_on_node_delete(collector, field, sub_objs, using):
 
 class assign(models.Model, BaseModel):
     id = models.BigAutoField(primary_key=True)
-    subscribe = models.ForeignKey(subscribe, on_delete=models.CASCADE)
+    subscribe = models.ForeignKey(subscribe, on_delete=models.CASCADE, null=True)
     node = models.ForeignKey(node, on_delete=assign_on_node_delete)
     enable = models.BooleanField(default=True)
     uuid = models.CharField(max_length=36)

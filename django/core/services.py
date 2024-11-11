@@ -28,8 +28,23 @@ class NodeService:
         return await self.backend.aenable(assign.uuid)
     async def adisable(self, assign):
         return await self.backend.adisable(assign.uuid)
-    async def atraffic(self, assign):
-        return await self.backend.atraffic(assign.uuid)
+    async def atraffic(self, assign, tries=3):
+        try:
+            return await self.backend.atraffic(assign.uuid)
+        except ConnectionError as e:
+            if tries:
+                return await self.atraffic(assign.uuid, tries=tries-1)
+            raise e
+    async def atrafficall(self):
+        assignq = models.assign.objects.filter(node=self.dbObj)
+        alltraffic = traffic(0)
+        async for assign in assignq:
+            try:
+                traf = await self.atraffic(assign)
+            except AssignNotSynced:
+                traf = traffic(0)
+            alltraffic += traf
+        return alltraffic
     async def aconfig(self, assign):
         return await self.backend.aconfig(assign.uuid)
     async def aall(self):

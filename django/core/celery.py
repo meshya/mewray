@@ -11,14 +11,18 @@ app.autodiscover_tasks()
 app.conf.beat_schedule = {
     'nodes_sync': {
         'task': 'core.tasks.sync_nodes_task',
-        'schedule': crontab(minute=21),
+        'schedule': crontab(minute='*/10'),
     },
     'subs_sync': {
         'task': 'core.tasks.sync_subs_task',
-        'schedule': crontab(hour='*/5')
+        'schedule': crontab(minute='14,26,38,50,2')
     },
     'subs_check':{
         'task': 'core.tasks.check_subs_task',
-        'schedule': crontab(hour='*/3')
+        'schedule': crontab(minute='*/10')
     },
+    'nodes_check':{
+        'task': 'core.tasks.check_nodes_task',
+        'schedule': crontab(hour='1,8,14', minute='31')
+    }
 }

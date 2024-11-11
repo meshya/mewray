@@ -4,11 +4,13 @@ from django.db.models import Subquery, Count
 from uuid import uuid4
 from core.services import SubscriptionService, NodeService
 from asgiref.sync import sync_to_async, async_to_sync
-from datetime import datetime
+from datetime import datetime, date
 from traffic import traffic
 from utils.sync import run_multiple_task
 
 async def sync_sub(sub):
+    if not await sub.aget('enable'):
+        return
     asignq = models.assign.objects.filter(subscribe=sub, enable=True, node__enable=True)
     count = await asignq.acount()
     nodeq = models.node.objects.filter()
@@ -74,13 +76,19 @@ async def sync_node(node):
     await run_multiple_task(tasks, 10)
 
 async def sync_assign(assign, node=None):
+    '''
+1.Assign exists in node?
+=>syncs enable status
+1.else?
+=>creates assign
+    '''
     if node is None:
         node = await assign.aget('node')
     service = NodeService(node)
     if not await service.aexists(assign):
         await service.aadd(assign)
         return
-    localEnable = assign.enable
+    localEnable = await assign.aget('enable')
     nodeEnable = await service.aisEnable(assign)
     if localEnable != nodeEnable:
         if localEnable:
@@ -88,13 +96,26 @@ async def sync_assign(assign, node=None):
         else:
             await service.adisable(assign)
 
+
+
 async def check_sub(sub):
+    '''
+1. End duration?
+=> Unlink and disable all assigns
+=> Resets duration
+
+2. End traffic?
+=> Disables subscribe
+=> Disables all assigns
+    '''
     service = SubscriptionService(sub)
     newEnable = enable = await sync_to_async(getattr)(sub, 'enable')
     usedTraffic = None
     error = None
     usedTraffic = await service.atraffic()
     subTraffic = await sync_to_async(getattr)(sub, 'traffic')
+    if not isinstance(subTraffic, traffic):
+        subTraffic = traffic(subTraffic, suffix='M')
     now = datetime.now()
     newStartDate = startDate = await sync_to_async(getattr)(sub, 'start_date')
     period = await sync_to_async(getattr)(sub, 'period')
@@ -105,17 +126,58 @@ async def check_sub(sub):
         year=startDate.year
     ) + period
     if now > end:
-        newStartDate = now
+        newStartDate = now.date()
         newEnable = True
         usedTraffic = traffic(0)
-        await assignq.adelete()
+        await assignq.aupdate(enable=False, subscribe=None)
     if enable:
         if usedTraffic > subTraffic:
             newEnable = False
+            await assignq.aupdate(enable=False)
     if enable != newEnable or newStartDate != startDate:
         sub.enable = newEnable
         sub.start_date = newStartDate
         await sub.asave()
+
+async def check_node(node:models.node):
+    '''
+1. End duration?
+=> Deletes all assigns
+=> Resets duration
+
+2. End traffic?
+=> Disables node
+=> Disables all assigns
+    '''
+    service = NodeService(node)
+    assignq = models.assign.objects.filter(node=node)
+    usedTraffic = await service.atrafficall()
+    allowedTraffic = await node.aget('max_traffic')
+    if not isinstance(allowedTraffic, traffic):
+        allowedTraffic = traffic(allowedTraffic, suffix='M')
+    duration = await node.aget('period')
+    durationStart = newDurationStart = await node.aget('period_start')
+    end = datetime(
+        day=durationStart.day,
+        month=durationStart.month,
+        year=durationStart.year
+    ) + duration
+    now = datetime.now()
+    enable = newEnable = await node.aget('enable')
+    if now > end:
+        newEnable = True
+        newDurationStart = now.date()
+        usedTraffic = traffic(0)
+        await assignq.adelete()
+    if enable:
+        if usedTraffic > allowedTraffic:
+            newEnable = False
+            await assignq.aupdate(enable=False)
+    if enable != newEnable or newDurationStart != durationStart:
+        node.enable = newEnable
+        node.period_start = newDurationStart
+        await node.asave()
+
 
 @shared_task
 def sync_subs_task():
@@ -150,7 +212,15 @@ def check_subs_task():
     tasks = []
     for sub in models.subscribe.objects.all():
         tasks.append(check_sub(sub))
-    async_to_sync(run_multiple_task)(tasks, 100)
+    async_to_sync(run_multiple_task)(tasks, 10)
+
+
+@shared_task
+def check_nodes_task():
+    tasks = []
+    for node in models.node.objects.all():
+        tasks.append(check_node(node))
+    async_to_sync(run_multiple_task)(tasks, 10)
 
 @shared_task
 def sync_assign_task(assignId):
