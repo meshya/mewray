@@ -62,7 +62,10 @@ class SubscriptionService:
         async def getTraffic(assign:models.assign):
             node = await assign.aget('node')
             nodeService = NodeService(node)
-            traf = await nodeService.atraffic(assign)
+            try:
+                traf = await nodeService.atraffic(assign)
+            except AssignNotSynced:
+                traf = traffic(0)
             traffics.append(traf)
         async for assign in assigns:
             tasks.append(getTraffic(assign))

@@ -23,6 +23,6 @@ app.conf.beat_schedule = {
     },
     'nodes_check':{
         'task': 'core.tasks.check_nodes_task',
-        'schedule': crontab(hour='1,8,14', minute='31')
+        'schedule': crontab(hour='*/2', minute='31')
     }
 }

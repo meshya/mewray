@@ -36,7 +36,7 @@ async def sync_sub(sub):
         ).annotate(
             assign_count=Count('assign')
         ).order_by(
-            '-assign_count'
+            'assign_count'
         )
         availableNodesIter = availableNodes.__aiter__()
         while count < subNodeNumber and count < nodeCount:
